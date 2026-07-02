@@ -1,61 +1,38 @@
 "use client";
 
-import { useState, FormEvent } from "react";
+import { useEffect, useState } from "react";
 import { useRouter, useParams } from "next/navigation";
-import { collection, addDoc } from "firebase/firestore";
+import { collection, addDoc, getDocs, query, orderBy } from "firebase/firestore";
 import { db } from "@/lib/firebase";
+import type { Question } from "@/lib/types";
+import QuestionForm, { type QuestionPayload } from "@/components/QuestionForm";
 
 export default function NewQuestionPage() {
   const router = useRouter();
   const params = useParams();
   const id = params.id as string;
 
-  const [order, setOrder] = useState(1);
-  const [prompt, setPrompt] = useState("");
-  const [choices, setChoices] = useState(["", ""]);
-  const [correctIndex, setCorrectIndex] = useState(0);
-  const [saving, setSaving] = useState(false);
-  const [error, setError] = useState("");
+  const [questions, setQuestions] = useState<Question[]>([]);
+  const [defaultOrder, setDefaultOrder] = useState(1);
+  const [loading, setLoading] = useState(true);
 
-  function addChoice() {
-    setChoices((prev) => [...prev, ""]);
-  }
-
-  function removeChoice(i: number) {
-    if (choices.length <= 2) return;
-    const next = choices.filter((_, idx) => idx !== i);
-    setChoices(next);
-    if (correctIndex >= next.length) setCorrectIndex(next.length - 1);
-  }
-
-  function updateChoice(i: number, value: string) {
-    setChoices((prev) => prev.map((c, idx) => (idx === i ? value : c)));
-  }
-
-  async function handleSubmit(e: FormEvent) {
-    e.preventDefault();
-    setError("");
-
-    if (choices.some((c) => c.trim() === "")) {
-      setError("All choices must have text.");
-      return;
+  useEffect(() => {
+    async function load() {
+      const snap = await getDocs(
+        query(collection(db, "assignments", id, "questions"), orderBy("order"))
+      );
+      const qs = snap.docs.map((d) => ({ id: d.id, ...d.data() }) as Question);
+      setQuestions(qs);
+      const maxOrder = qs.reduce((max, q) => Math.max(max, q.order), 0);
+      setDefaultOrder(maxOrder + 1);
+      setLoading(false);
     }
+    load();
+  }, [id]);
 
-    setSaving(true);
-    try {
-      await addDoc(collection(db, "assignments", id, "questions"), {
-        type: "multiple_choice",
-        order: Number(order),
-        prompt: prompt.trim(),
-        choices: choices.map((c) => c.trim()),
-        correctIndex: Number(correctIndex),
-        manualGrade: false,
-      });
-      router.push(`/teacher/assignments/${id}`);
-    } catch {
-      setError("Failed to save. Try again.");
-      setSaving(false);
-    }
+  async function handleSubmit(payload: QuestionPayload) {
+    await addDoc(collection(db, "assignments", id, "questions"), payload);
+    router.push(`/teacher/assignments/${id}`);
   }
 
   return (
@@ -68,103 +45,19 @@ export default function NewQuestionPage() {
           ← Assignment
         </button>
         <h1 className="text-xl font-semibold text-gray-900">Add Question</h1>
-        <span className="rounded bg-gray-100 px-2 py-0.5 text-xs font-medium text-gray-500 uppercase">
-          Multiple Choice
-        </span>
       </div>
 
-      <form onSubmit={handleSubmit} className="space-y-5">
-        <div>
-          <label className={labelClass}>Order</label>
-          <input
-            type="number"
-            required
-            min={1}
-            value={order}
-            onChange={(e) => setOrder(Number(e.target.value))}
-            className={`${inputClass} w-24`}
-          />
-        </div>
-
-        <div>
-          <label className={labelClass}>Prompt</label>
-          <textarea
-            required
-            rows={3}
-            value={prompt}
-            onChange={(e) => setPrompt(e.target.value)}
-            className={inputClass}
-          />
-        </div>
-
-        <div>
-          <div className="mb-2 flex items-center justify-between">
-            <label className={labelClass}>Choices</label>
-            <button
-              type="button"
-              onClick={addChoice}
-              className="text-sm text-blue-600 hover:underline"
-            >
-              + Add choice
-            </button>
-          </div>
-          <div className="space-y-2">
-            {choices.map((c, i) => (
-              <div key={i} className="flex items-center gap-2">
-                <input
-                  type="radio"
-                  name="correctIndex"
-                  checked={correctIndex === i}
-                  onChange={() => setCorrectIndex(i)}
-                  title="Mark as correct answer"
-                />
-                <input
-                  required
-                  value={c}
-                  onChange={(e) => updateChoice(i, e.target.value)}
-                  placeholder={`Choice ${i + 1}`}
-                  className={`${inputClass} flex-1`}
-                />
-                <button
-                  type="button"
-                  onClick={() => removeChoice(i)}
-                  disabled={choices.length <= 2}
-                  className="text-sm text-red-500 hover:text-red-700 disabled:opacity-30"
-                  title="Remove choice"
-                >
-                  ✕
-                </button>
-              </div>
-            ))}
-          </div>
-          <p className="mt-1.5 text-xs text-gray-500">
-            Select the radio button next to the correct answer.
-          </p>
-        </div>
-
-        {error && <p className="text-sm text-red-600">{error}</p>}
-
-        <div className="flex gap-3">
-          <button
-            type="submit"
-            disabled={saving}
-            className="rounded-md bg-blue-600 px-4 py-2 text-sm font-medium text-white hover:bg-blue-700 disabled:opacity-50"
-          >
-            {saving ? "Saving…" : "Add Question"}
-          </button>
-          <button
-            type="button"
-            onClick={() => router.push(`/teacher/assignments/${id}`)}
-            className="rounded-md border border-gray-300 px-4 py-2 text-sm text-gray-700 hover:bg-gray-50"
-          >
-            Cancel
-          </button>
-        </div>
-      </form>
+      {loading ? (
+        <p className="text-gray-500">Loading…</p>
+      ) : (
+        <QuestionForm
+          existingQuestions={questions}
+          defaultOrder={defaultOrder}
+          submitLabel="Add Question"
+          onSubmit={handleSubmit}
+          onCancel={() => router.push(`/teacher/assignments/${id}`)}
+        />
+      )}
     </div>
   );
 }
-
-const inputClass =
-  "block w-full rounded-md border border-gray-300 px-3 py-2 text-sm text-black shadow-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500";
-const labelClass = "block text-sm font-medium text-gray-700 mb-1";
