@@ -48,16 +48,6 @@ firebase use <your-project-id>
 firebase deploy --only firestore:rules
 ```
 
-## Seed example data
-
-The app ships with a one-click seed tool that creates a sample assignment containing one question of each type (multiple choice, type output, fill in the blank, fake compiler, free text).
-
-1. Sign in as the teacher.
-2. Navigate to `/teacher/seed`.
-3. Click **Create Seed Assignment**.
-
-The seed runs once in the browser using your authenticated Firebase session — no CLI or service account needed. Running it again creates a second copy, so click once only.
-
 ## Local development
 
 ```bash

@@ -40,3 +40,10 @@ yarn-error.log*
 # typescript
 *.tsbuildinfo
 next-env.d.ts
+
+#claude instructions
+claude-code-prompt.md
+CLAUDE.md
+phase2-prompt.md
+phase3-prompt.md
+cleanup-prompt.md
