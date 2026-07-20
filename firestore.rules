@@ -35,12 +35,16 @@ service cloud.firestore {
     match /submissions/{subId} {
       allow read, write: if isTeacher() ||
         (isStudent() && subId.matches(request.auth.uid + '_.*'));
+    }
 
-      match /attempts/{attemptId} {
-        allow read, write: if isTeacher() ||
-          (isStudent() &&
-           get(/databases/$(database)/documents/submissions/$(subId)).data.studentUid == request.auth.uid);
-      }
+    // Separate top-level rule (not nested under /submissions) so it also
+    // covers collectionGroup('attempts') queries, which nested match blocks
+    // do not automatically apply to.
+    match /{path=**}/attempts/{attemptId} {
+      allow read, write: if isTeacher() ||
+        (isStudent() &&
+         get(/databases/$(database)/documents/$(path)).data.studentUid == request.auth.uid);
     }
   }
 }
+

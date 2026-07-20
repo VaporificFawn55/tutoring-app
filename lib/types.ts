@@ -27,3 +27,24 @@ export type Question = {
   correctAnswer?: string;
   manualGrade: boolean;
 };
+
+export type Submission = {
+  id: string;
+  studentUid: string;
+  assignmentId: string;
+  status: "in_progress" | "completed";
+  autoScore: number;
+  totalAutoGradable: number;
+  startedAt: Timestamp;
+  completedAt?: Timestamp;
+};
+
+export type Attempt = {
+  id: string;
+  questionId: string;
+  answer: string;
+  isCorrect: boolean | null;
+  gradedManually: boolean | null;
+  timeSpentMs: number;
+  createdAt: Timestamp;
+};

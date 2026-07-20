@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import {
   collection,
+  collectionGroup,
   getDocs,
   deleteDoc,
   doc,
@@ -16,6 +17,7 @@ import type { Assignment } from "@/lib/types";
 export default function TeacherDashboard() {
   const router = useRouter();
   const [assignments, setAssignments] = useState<Assignment[]>([]);
+  const [needsReviewCount, setNeedsReviewCount] = useState(0);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
@@ -23,11 +25,18 @@ export default function TeacherDashboard() {
   }, []);
 
   async function load() {
-    const snap = await getDocs(
-      query(collection(db, "assignments"), orderBy("order"))
-    );
+    const [aSnap, attSnap] = await Promise.all([
+      getDocs(query(collection(db, "assignments"), orderBy("order"))),
+      getDocs(collectionGroup(db, "attempts")),
+    ]);
     setAssignments(
-      snap.docs.map((d) => ({ id: d.id, ...d.data() }) as Assignment)
+      aSnap.docs.map((d) => ({ id: d.id, ...d.data() }) as Assignment)
+    );
+    setNeedsReviewCount(
+      attSnap.docs.filter((d) => {
+        const data = d.data();
+        return data.isCorrect === null && data.gradedManually === null;
+      }).length
     );
     setLoading(false);
   }
@@ -46,12 +55,25 @@ export default function TeacherDashboard() {
     <div>
       <div className="mb-6 flex items-center justify-between">
         <h1 className="text-2xl font-semibold text-gray-900">Assignments</h1>
-        <button
-          onClick={() => router.push("/teacher/assignments/new")}
-          className="rounded-md bg-blue-600 px-4 py-2 text-sm font-medium text-white hover:bg-blue-700"
-        >
-          New Assignment
-        </button>
+        <div className="flex items-center gap-3">
+          <button
+            onClick={() => router.push("/teacher/review")}
+            className="relative rounded-md border border-gray-300 bg-white px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50"
+          >
+            Review Queue
+            {needsReviewCount > 0 && (
+              <span className="ml-2 rounded-full bg-amber-100 px-2 py-0.5 text-xs font-medium text-amber-700">
+                {needsReviewCount}
+              </span>
+            )}
+          </button>
+          <button
+            onClick={() => router.push("/teacher/assignments/new")}
+            className="rounded-md bg-blue-600 px-4 py-2 text-sm font-medium text-white hover:bg-blue-700"
+          >
+            New Assignment
+          </button>
+        </div>
       </div>
 
       {loading && <p className="text-gray-500">Loading…</p>}
@@ -71,6 +93,12 @@ export default function TeacherDashboard() {
               {a.title}
             </span>
             <div className="flex gap-2">
+              <button
+                onClick={() => router.push(`/teacher/assignments/${a.id}/progress`)}
+                className="rounded px-3 py-1 text-sm text-gray-600 hover:bg-gray-100"
+              >
+                Progress
+              </button>
               <button
                 onClick={() => router.push(`/teacher/assignments/${a.id}`)}
                 className="rounded px-3 py-1 text-sm text-blue-600 hover:bg-blue-50"
