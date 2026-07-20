@@ -7,6 +7,8 @@ export type Assignment = {
   order: number;
   createdBy: string;
   createdAt: Timestamp;
+  // Absent on legacy pre-feature docs — treat as unpublished (draft) wherever read.
+  published?: boolean;
 };
 
 export type QuestionType =

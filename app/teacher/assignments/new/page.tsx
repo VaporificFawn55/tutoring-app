@@ -25,6 +25,7 @@ export default function NewAssignmentPage() {
         title: title.trim(),
         description: description.trim(),
         order: Number(order),
+        published: false,
         createdBy: user.uid,
         createdAt: serverTimestamp(),
       });

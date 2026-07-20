@@ -55,6 +55,18 @@ export default function AssignmentRunnerPage() {
   useEffect(() => {
     if (!user) return;
     async function load() {
+      let assignmentSnap;
+      try {
+        assignmentSnap = await getDoc(doc(db, "assignments", id));
+      } catch {
+        router.replace("/student");
+        return;
+      }
+      if (!assignmentSnap.exists() || assignmentSnap.data().published !== true) {
+        router.replace("/student");
+        return;
+      }
+
       const qSnap = await getDocs(
         query(
           collection(db, "assignments", id, "questions"),

@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
-import { collection, getDocs, query, orderBy } from "firebase/firestore";
+import { collection, getDocs, query, where } from "firebase/firestore";
 import { db } from "@/lib/firebase";
 import { useAuth } from "@/contexts/AuthContext";
 import { getScoreSummary, ScoreSummary } from "@/lib/scoring";
@@ -22,12 +22,14 @@ export default function StudentDashboard() {
   useEffect(() => {
     if (!user) return;
     async function load() {
+      // No orderBy here — combining it with the equality filter below would
+      // require a composite index. Sort client-side instead.
       const snap = await getDocs(
-        query(collection(db, "assignments"), orderBy("order"))
+        query(collection(db, "assignments"), where("published", "==", true))
       );
-      const assignments = snap.docs.map(
-        (d) => ({ id: d.id, ...d.data() }) as Assignment
-      );
+      const assignments = snap.docs
+        .map((d) => ({ id: d.id, ...d.data() }) as Assignment)
+        .sort((a, b) => a.order - b.order);
       const rowsData = await Promise.all(
         assignments.map(async (a) => ({
           assignment: a,

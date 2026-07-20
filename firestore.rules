@@ -19,22 +19,42 @@ service cloud.firestore {
     }
 
     match /users/{uid} {
-      allow read, write: if request.auth.uid == uid;
+      allow read: if request.auth.uid == uid;
+
+      // Role is fixed at account creation and anchored to the verified
+      // auth token's email (not client-supplied data), so a signed-in
+      // user can never grant themselves teacher access by writing their
+      // own role. Keep these two emails in sync with lib/roles.ts.
+      allow create: if request.auth.uid == uid &&
+        request.resource.data.email == request.auth.token.email &&
+        (
+          (request.resource.data.role == "teacher" &&
+           request.auth.token.email == "teacher@example.com") ||
+          (request.resource.data.role == "student" &&
+           request.auth.token.email == "student@example.com")
+        );
+
+      // No update/delete — the app never modifies this doc after creation.
     }
 
     match /assignments/{aid} {
-      allow read: if isSignedIn();
+      allow read: if isTeacher() || resource.data.published == true;
       allow write: if isTeacher();
 
       match /questions/{qid} {
-        allow read: if isSignedIn();
+        allow read: if isTeacher() ||
+          get(/databases/$(database)/documents/assignments/$(aid)).data.published == true;
         allow write: if isTeacher();
       }
     }
 
     match /submissions/{subId} {
-      allow read, write: if isTeacher() ||
+      allow read: if isTeacher() ||
         (isStudent() && subId.matches(request.auth.uid + '_.*'));
+
+      allow write: if isTeacher() ||
+        (isStudent() && subId.matches(request.auth.uid + '_.*') &&
+         request.resource.data.studentUid == request.auth.uid);
     }
 
     // Separate top-level rule (not nested under /submissions) so it also

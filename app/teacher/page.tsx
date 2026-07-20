@@ -10,6 +10,7 @@ import {
   doc,
   query,
   orderBy,
+  updateDoc,
 } from "firebase/firestore";
 import { db } from "@/lib/firebase";
 import type { Assignment } from "@/lib/types";
@@ -39,6 +40,14 @@ export default function TeacherDashboard() {
       }).length
     );
     setLoading(false);
+  }
+
+  async function togglePublish(a: Assignment) {
+    const published = !(a.published === true);
+    await updateDoc(doc(db, "assignments", a.id), { published });
+    setAssignments((prev) =>
+      prev.map((x) => (x.id === a.id ? { ...x, published } : x))
+    );
   }
 
   async function handleDelete(id: string) {
@@ -91,8 +100,23 @@ export default function TeacherDashboard() {
             <span className="text-gray-900">
               <span className="mr-2 text-sm text-gray-400">#{a.order}</span>
               {a.title}
+              {a.published === true ? (
+                <span className="ml-2 rounded-full bg-green-100 px-2 py-0.5 text-xs font-medium text-green-700">
+                  Published
+                </span>
+              ) : (
+                <span className="ml-2 rounded-full bg-gray-100 px-2 py-0.5 text-xs font-medium text-gray-500">
+                  Draft
+                </span>
+              )}
             </span>
             <div className="flex gap-2">
+              <button
+                onClick={() => togglePublish(a)}
+                className="rounded px-3 py-1 text-sm text-gray-600 hover:bg-gray-100"
+              >
+                {a.published === true ? "Un-publish" : "Publish"}
+              </button>
               <button
                 onClick={() => router.push(`/teacher/assignments/${a.id}/progress`)}
                 className="rounded px-3 py-1 text-sm text-gray-600 hover:bg-gray-100"
