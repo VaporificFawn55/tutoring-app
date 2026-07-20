@@ -19,7 +19,9 @@ service cloud.firestore {
     }
 
     match /users/{uid} {
-      allow read: if request.auth.uid == uid;
+      // Teacher can read all profiles (needed to resolve the student's uid
+      // for progress/review views); everyone can read their own.
+      allow read: if request.auth.uid == uid || isTeacher();
 
       // Role is fixed at account creation and anchored to the verified
       // auth token's email (not client-supplied data), so a signed-in
