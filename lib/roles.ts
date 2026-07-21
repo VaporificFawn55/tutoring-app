@@ -1,3 +1,2 @@
-// REPLACE these with the actual email addresses used in Firebase Auth
-export const TEACHER_EMAIL = "teacher@example.com";
-export const STUDENT_EMAIL = "student@example.com";
+export const TEACHER_EMAIL = process.env.NEXT_PUBLIC_TEACHER_EMAIL!;
+export const STUDENT_EMAIL = process.env.NEXT_PUBLIC_STUDENT_EMAIL!;

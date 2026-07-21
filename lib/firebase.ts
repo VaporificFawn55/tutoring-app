@@ -24,3 +24,4 @@ const app: FirebaseApp | null = isBrowser
 
 export const auth = (isBrowser && app ? getAuth(app) : null) as Auth;
 export const db = (isBrowser && app ? getFirestore(app) : null) as Firestore;
+ 
