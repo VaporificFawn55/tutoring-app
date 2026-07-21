@@ -31,9 +31,9 @@ service cloud.firestore {
         request.resource.data.email == request.auth.token.email &&
         (
           (request.resource.data.role == "teacher" &&
-           request.auth.token.email == "teacher@example.com") ||
+           request.auth.token.email == "hes_acucido18@gmail.com") ||
           (request.resource.data.role == "student" &&
-           request.auth.token.email == "student@example.com")
+           request.auth.token.email == "tisugah_iba13@outlook.com")
         );
 
       // No update/delete — the app never modifies this doc after creation.
