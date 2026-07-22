@@ -192,7 +192,7 @@ export default function AssignmentRunnerPage() {
 
   if (allDone) {
     return (
-      <div className="max-w-lg mx-auto">
+      <div className="w-[60%] mx-auto">
         <div className="mb-6 flex items-center gap-3">
           <button
             onClick={() => router.push("/student")}
@@ -228,7 +228,7 @@ export default function AssignmentRunnerPage() {
   const inputDisabled = feedback !== "idle" || submitting;
 
   return (
-    <div className="max-w-lg mx-auto">
+    <div className="w-[60%] mx-auto">
       <div className="mb-6 flex items-center gap-3">
         <button
           onClick={() => router.push("/student")}
