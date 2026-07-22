@@ -1,7 +1,33 @@
 "use client";
 
-import { useState, FormEvent } from "react";
+import { useState, useRef, useEffect, FormEvent } from "react";
 import type { Question, QuestionType } from "@/lib/types";
+
+// Textarea that grows to fit its content so the whole value is visible
+// without an inner scrollbar.
+function AutoTextarea({
+  value,
+  className,
+  ...props
+}: React.ComponentProps<"textarea">) {
+  const ref = useRef<HTMLTextAreaElement>(null);
+
+  useEffect(() => {
+    const el = ref.current;
+    if (!el) return;
+    el.style.height = "auto";
+    el.style.height = `${el.scrollHeight}px`;
+  }, [value]);
+
+  return (
+    <textarea
+      ref={ref}
+      value={value}
+      className={`resize-none overflow-hidden ${className ?? ""}`}
+      {...props}
+    />
+  );
+}
 
 export type QuestionPayload = {
   type: QuestionType;
@@ -185,12 +211,12 @@ export default function QuestionForm({
       {/* Prompt — all types */}
       <div>
         <label className={labelClass}>Prompt</label>
-        <textarea
+        <AutoTextarea
           required
           rows={3}
           value={prompt}
           onChange={(e) => setPrompt(e.target.value)}
-          className={inputClass}
+          className={`${inputClass} min-h-[76px]`}
           placeholder="Question text shown to the student"
         />
       </div>
