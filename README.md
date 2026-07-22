@@ -2,6 +2,51 @@
 
 A single-teacher / single-student coding-practice platform.
 
+## Purpose
+
+I built this app to support the student I'm currently tutoring. It gives them a
+private space to practice programming between our sessions: I (the teacher)
+author coding exercises, publish them when they're ready, and the student works
+through them on their own. Most questions grade themselves instantly so the
+student gets immediate feedback, while open-ended answers come back to me to
+review by hand. It's intentionally scoped to one teacher and one student.
+
+## Features so far
+
+### Accounts & roles
+- Email/password sign-in via Firebase Authentication.
+- Two fixed roles — **teacher** and **student** — assigned automatically on
+  first sign-in based on the account's email. Each role has its own protected
+  section of the app, enforced by Firestore security rules.
+
+### Teacher
+- **Assignments dashboard** listing every assignment with its published/draft
+  status.
+- **Create, edit, and delete** assignments (title, description, and display
+  order).
+- **Publish / un-publish** each assignment to control what the student can see.
+- **Add, edit, and order questions** within an assignment, in five formats:
+  - **Multiple Choice** — pick the correct option.
+  - **Type Output** — predict the output of a Python snippet.
+  - **Fill in the Blank** — supply the token that completes the code.
+  - **Fake Compiler** — a terminal-styled snippet to reason about.
+  - **Free Text** — an open-ended answer (not auto-graded).
+- **Review Queue** for grading free-text answers as correct/incorrect by hand,
+  with a badge showing how many answers are waiting.
+- **Progress view** per assignment showing the student's answers and scores.
+
+### Student
+- **Assignments dashboard** showing only published assignments, each with a
+  status badge (Not started / In progress / Completed) and score so far.
+- **Question runner** that presents one question at a time and preserves the
+  formatting of the prompt exactly as the teacher wrote it.
+- **Instant auto-grading** for all question types except free text, with
+  correct / try-again / submitted feedback.
+- **Resume support** — progress is saved per question, so the student picks up
+  where they left off.
+- **Completion summary** with an auto-graded score plus an overall score once
+  any free-text answers have been reviewed.
+
 ## Firebase project setup
 
 1. Go to [Firebase console](https://console.firebase.google.com) and create a new project.
