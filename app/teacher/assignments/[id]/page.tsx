@@ -85,7 +85,7 @@ export default function AssignmentDetailPage() {
   if (loading) return <p className="text-gray-500">Loading…</p>;
 
   return (
-    <div className="max-w-2xl space-y-8">
+    <div className="max-w-2xl mx-auto space-y-8">
       {/* Header */}
       <div className="flex items-center gap-3">
         <button

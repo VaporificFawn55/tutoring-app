@@ -77,7 +77,7 @@ export default function ProgressPage() {
   const achieved = (submission?.autoScore ?? 0) + gradedCorrect;
 
   return (
-    <div className="max-w-2xl space-y-6">
+    <div className="max-w-2xl mx-auto space-y-6">
       <div className="flex items-center gap-3">
         <button
           onClick={() => router.push(`/teacher/assignments/${id}`)}

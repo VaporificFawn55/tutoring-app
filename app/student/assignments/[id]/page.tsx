@@ -192,7 +192,7 @@ export default function AssignmentRunnerPage() {
 
   if (allDone) {
     return (
-      <div className="max-w-lg">
+      <div className="max-w-lg mx-auto">
         <div className="mb-6 flex items-center gap-3">
           <button
             onClick={() => router.push("/student")}
@@ -228,7 +228,7 @@ export default function AssignmentRunnerPage() {
   const inputDisabled = feedback !== "idle" || submitting;
 
   return (
-    <div className="max-w-lg">
+    <div className="max-w-lg mx-auto">
       <div className="mb-6 flex items-center gap-3">
         <button
           onClick={() => router.push("/student")}
@@ -242,7 +242,7 @@ export default function AssignmentRunnerPage() {
       </div>
 
       <div className="rounded-lg border border-gray-200 bg-white px-6 py-5 space-y-4">
-        <p className="font-medium text-gray-900">{question.prompt}</p>
+        <p className="font-medium text-gray-900 whitespace-pre-wrap">{question.prompt}</p>
 
         {/* Code display */}
         {question.type === "type_output" || question.type === "fill_blank" ? (

@@ -105,7 +105,7 @@ export default function ReviewQueuePage() {
   if (loading) return <p className="text-gray-500">Loading…</p>;
 
   return (
-    <div className="max-w-2xl space-y-6">
+    <div className="max-w-2xl mx-auto space-y-6">
       <h1 className="text-2xl font-semibold text-gray-900">Review Queue</h1>
 
       {items.length === 0 && (

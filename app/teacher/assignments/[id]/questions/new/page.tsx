@@ -36,7 +36,7 @@ export default function NewQuestionPage() {
   }
 
   return (
-    <div className="max-w-lg">
+    <div className="max-w-lg mx-auto">
       <div className="mb-6 flex items-center gap-3">
         <button
           onClick={() => router.push(`/teacher/assignments/${id}`)}

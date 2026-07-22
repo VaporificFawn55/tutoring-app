@@ -86,7 +86,7 @@ export default function EditQuestionPage() {
   if (!question) return null;
 
   return (
-    <div className="max-w-lg">
+    <div className="max-w-lg mx-auto">
       <div className="mb-6 flex items-center justify-between">
         <div className="flex items-center gap-3">
           <button
