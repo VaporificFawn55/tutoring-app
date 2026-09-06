@@ -6,6 +6,12 @@ import { collection, getDoc, getDocs, doc, query, orderBy } from "firebase/fires
 import { db } from "@/lib/firebase";
 import { getStudentUid } from "@/lib/scoring";
 import type { Assignment, Attempt, Question, Submission } from "@/lib/types";
+import { Alert } from "@/components/ui/Alert";
+import { Badge } from "@/components/ui/Badge";
+import { Card } from "@/components/ui/Card";
+import { Container } from "@/components/ui/Container";
+import { LoadingState } from "@/components/ui/LoadingState";
+import { PageHeader } from "@/components/ui/PageHeader";
 
 type QuestionWithAttempts = {
   question: Question;
@@ -67,7 +73,12 @@ export default function ProgressPage() {
     load();
   }, [id, router]);
 
-  if (loading) return <p className="text-gray-500">Loading…</p>;
+  if (loading)
+    return (
+      <Container>
+        <LoadingState />
+      </Container>
+    );
 
   const totalQuestions = rows.length;
   const gradedCorrect = rows.reduce(
@@ -77,127 +88,103 @@ export default function ProgressPage() {
   const achieved = (submission?.autoScore ?? 0) + gradedCorrect;
 
   return (
-    <div className="max-w-2xl mx-auto space-y-6">
-      <div className="flex items-center gap-3">
-        <button
-          onClick={() => router.push(`/teacher/assignments/${id}`)}
-          className="text-sm text-gray-500 hover:text-gray-900"
-        >
-          ← {assignment?.title}
-        </button>
-      </div>
-
-      <h1 className="text-2xl font-semibold text-gray-900">Student Progress</h1>
+    <Container className="space-y-6">
+      <PageHeader
+        title="Student Progress"
+        backHref={`/teacher/assignments/${id}`}
+        backLabel={assignment?.title ?? "Assignment"}
+      />
 
       {noStudent && (
-        <p className="text-sm text-amber-700 rounded bg-amber-50 border border-amber-200 px-3 py-2">
-          No student account found yet.
-        </p>
+        <Alert tone="warning">No student account found yet.</Alert>
       )}
 
-      {!noStudent && !submission && <p className="text-gray-500">Not started.</p>}
+      {!noStudent && !submission && <LoadingState label="Not started." />}
 
       {submission && (
-        <div className="flex gap-8 rounded-lg border border-gray-200 bg-white px-5 py-4">
+        <Card className="flex gap-8">
           <div>
-            <p className="text-xs text-gray-500">Status</p>
-            <p className="font-medium text-gray-900 capitalize">
+            <p className="text-xs text-ink-muted">Status</p>
+            <p className="font-medium capitalize text-ink">
               {submission.status.replace("_", " ")}
             </p>
           </div>
           <div>
-            <p className="text-xs text-gray-500">Auto score</p>
-            <p className="font-medium text-gray-900">
+            <p className="text-xs text-ink-muted">Auto score</p>
+            <p className="font-medium text-ink">
               {submission.autoScore}/{submission.totalAutoGradable}
             </p>
           </div>
           <div>
-            <p className="text-xs text-gray-500">Overall score</p>
-            <p className="font-medium text-gray-900">
+            <p className="text-xs text-ink-muted">Overall score</p>
+            <p className="font-medium text-ink">
               {achieved}/{totalQuestions}
             </p>
           </div>
-        </div>
+        </Card>
       )}
 
       <div className="space-y-4">
         {rows.map(({ question, attempts }, i) => (
-          <div
-            key={question.id}
-            className="rounded-lg border border-gray-200 bg-white px-5 py-4"
-          >
-            <div className="flex items-center justify-between gap-3 mb-2">
-              <p className="font-medium text-gray-900">
-                <span className="mr-2 text-xs text-gray-400">Q{i + 1}</span>
+          <Card key={question.id}>
+            <div className="mb-2 flex items-center justify-between gap-3">
+              <p className="font-medium text-ink">
+                <span className="mr-2 text-xs text-ink-subtle">Q{i + 1}</span>
                 {question.prompt}
               </p>
-              <span className="shrink-0 rounded bg-gray-100 px-1.5 py-0.5 text-xs font-medium text-gray-500 uppercase">
-                {question.type}
-              </span>
+              <Badge className="shrink-0 uppercase">{question.type}</Badge>
             </div>
 
             {attempts.length === 0 ? (
-              <p className="text-sm text-gray-400">Not attempted.</p>
+              <p className="text-sm text-ink-subtle">Not attempted.</p>
             ) : (
               <ul className="space-y-1.5">
                 {attempts.map((a, idx) => (
                   <li
                     key={a.id}
-                    className="flex items-center justify-between gap-3 text-sm border-t border-gray-100 pt-1.5 first:border-0 first:pt-0"
+                    className="flex items-center justify-between gap-3 border-t border-border pt-1.5 text-sm first:border-0 first:pt-0"
                   >
-                    <span className="text-gray-700 truncate">
-                      <span className="text-xs text-gray-400 mr-2">#{idx + 1}</span>
+                    <span className="truncate text-ink-muted">
+                      <span className="mr-2 text-xs text-ink-subtle">
+                        #{idx + 1}
+                      </span>
                       &ldquo;{a.answer}&rdquo;
                     </span>
-                    <span className="flex items-center gap-2 shrink-0">
+                    <span className="flex shrink-0 items-center gap-2">
                       <StatusBadge attempt={a} />
-                      <span className="text-xs text-gray-400">
+                      <span className="text-xs text-ink-subtle">
                         {(a.timeSpentMs / 1000).toFixed(1)}s
                       </span>
-                      <span className="text-xs text-gray-400">
-                        {a.createdAt?.toDate ? a.createdAt.toDate().toLocaleString() : ""}
+                      <span className="text-xs text-ink-subtle">
+                        {a.createdAt?.toDate
+                          ? a.createdAt.toDate().toLocaleString()
+                          : ""}
                       </span>
                     </span>
                   </li>
                 ))}
               </ul>
             )}
-          </div>
+          </Card>
         ))}
       </div>
-    </div>
+    </Container>
   );
 }
 
 function StatusBadge({ attempt }: { attempt: Attempt }) {
   if (attempt.isCorrect === null) {
     if (attempt.gradedManually === true) {
-      return (
-        <span className="text-xs font-medium rounded-full bg-green-100 text-green-700 px-2 py-0.5">
-          Correct
-        </span>
-      );
+      return <Badge tone="success">Correct</Badge>;
     }
     if (attempt.gradedManually === false) {
-      return (
-        <span className="text-xs font-medium rounded-full bg-red-100 text-red-700 px-2 py-0.5">
-          Incorrect
-        </span>
-      );
+      return <Badge tone="danger">Incorrect</Badge>;
     }
-    return (
-      <span className="text-xs font-medium rounded-full bg-amber-100 text-amber-700 px-2 py-0.5">
-        Pending review
-      </span>
-    );
+    return <Badge tone="warning">Pending review</Badge>;
   }
   return attempt.isCorrect ? (
-    <span className="text-xs font-medium rounded-full bg-green-100 text-green-700 px-2 py-0.5">
-      Correct
-    </span>
+    <Badge tone="success">Correct</Badge>
   ) : (
-    <span className="text-xs font-medium rounded-full bg-red-100 text-red-700 px-2 py-0.5">
-      Incorrect
-    </span>
+    <Badge tone="danger">Incorrect</Badge>
   );
 }

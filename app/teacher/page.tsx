@@ -14,6 +14,13 @@ import {
 } from "firebase/firestore";
 import { db } from "@/lib/firebase";
 import type { Assignment } from "@/lib/types";
+import { Badge } from "@/components/ui/Badge";
+import { Button } from "@/components/ui/Button";
+import { Card } from "@/components/ui/Card";
+import { Container } from "@/components/ui/Container";
+import { EmptyState } from "@/components/ui/EmptyState";
+import { LoadingState } from "@/components/ui/LoadingState";
+import { PageHeader } from "@/components/ui/PageHeader";
 
 export default function TeacherDashboard() {
   const router = useRouter();
@@ -22,25 +29,24 @@ export default function TeacherDashboard() {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
+    async function load() {
+      const [aSnap, attSnap] = await Promise.all([
+        getDocs(query(collection(db, "assignments"), orderBy("createdAt"))),
+        getDocs(collectionGroup(db, "attempts")),
+      ]);
+      setAssignments(
+        aSnap.docs.map((d) => ({ id: d.id, ...d.data() }) as Assignment)
+      );
+      setNeedsReviewCount(
+        attSnap.docs.filter((d) => {
+          const data = d.data();
+          return data.isCorrect === null && data.gradedManually === null;
+        }).length
+      );
+      setLoading(false);
+    }
     load();
   }, []);
-
-  async function load() {
-    const [aSnap, attSnap] = await Promise.all([
-      getDocs(query(collection(db, "assignments"), orderBy("order"))),
-      getDocs(collectionGroup(db, "attempts")),
-    ]);
-    setAssignments(
-      aSnap.docs.map((d) => ({ id: d.id, ...d.data() }) as Assignment)
-    );
-    setNeedsReviewCount(
-      attSnap.docs.filter((d) => {
-        const data = d.data();
-        return data.isCorrect === null && data.gradedManually === null;
-      }).length
-    );
-    setLoading(false);
-  }
 
   async function togglePublish(a: Assignment) {
     const published = !(a.published === true);
@@ -61,84 +67,92 @@ export default function TeacherDashboard() {
   }
 
   return (
-    <div>
-      <div className="mb-6 flex items-center justify-between">
-        <h1 className="text-2xl font-semibold text-gray-900">Assignments</h1>
-        <div className="flex items-center gap-3">
-          <button
-            onClick={() => router.push("/teacher/review")}
-            className="relative rounded-md border border-gray-300 bg-white px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50"
-          >
-            Review Queue
-            {needsReviewCount > 0 && (
-              <span className="ml-2 rounded-full bg-amber-100 px-2 py-0.5 text-xs font-medium text-amber-700">
-                {needsReviewCount}
-              </span>
-            )}
-          </button>
-          <button
-            onClick={() => router.push("/teacher/assignments/new")}
-            className="rounded-md bg-blue-600 px-4 py-2 text-sm font-medium text-white hover:bg-blue-700"
-          >
-            New Assignment
-          </button>
-        </div>
-      </div>
+    <Container>
+      <PageHeader
+        title="Assignments"
+        actions={
+          <>
+            <Button
+              variant="secondary"
+              onClick={() => router.push("/teacher/review")}
+            >
+              Review Queue
+              {needsReviewCount > 0 && (
+                <Badge tone="warning" className="ml-2">
+                  {needsReviewCount}
+                </Badge>
+              )}
+            </Button>
+            <Button onClick={() => router.push("/teacher/assignments/new")}>
+              New Assignment
+            </Button>
+          </>
+        }
+      />
 
-      {loading && <p className="text-gray-500">Loading…</p>}
+      {loading && <LoadingState />}
 
       {!loading && assignments.length === 0 && (
-        <p className="text-gray-500">No assignments yet. Create one to get started.</p>
+        <EmptyState
+          title="No assignments yet."
+          description="Create one to get started."
+        />
       )}
 
       <ul className="space-y-2">
         {assignments.map((a) => (
-          <li
+          <Card
             key={a.id}
-            className="flex items-center justify-between rounded-lg border border-gray-200 bg-white px-4 py-3"
+            as="li"
+            padding="sm"
+            className="flex items-center justify-between"
           >
-            <span className="text-gray-900">
-              <span className="mr-2 text-sm text-gray-400">#{a.order}</span>
+            <span className="text-ink">
               {a.title}
-              {a.published === true ? (
-                <span className="ml-2 rounded-full bg-green-100 px-2 py-0.5 text-xs font-medium text-green-700">
-                  Published
-                </span>
-              ) : (
-                <span className="ml-2 rounded-full bg-gray-100 px-2 py-0.5 text-xs font-medium text-gray-500">
-                  Draft
-                </span>
-              )}
+              <Badge
+                tone={a.published === true ? "success" : "neutral"}
+                className="ml-2"
+              >
+                {a.published === true ? "Published" : "Draft"}
+              </Badge>
             </span>
-            <div className="flex gap-2">
-              <button
+            <div className="flex gap-1">
+              <Button
+                size="sm"
+                variant="ghost"
                 onClick={() => togglePublish(a)}
-                className="rounded px-3 py-1 text-sm text-gray-600 hover:bg-gray-100"
               >
                 {a.published === true ? "Un-publish" : "Publish"}
-              </button>
-              <button
-                onClick={() => router.push(`/teacher/assignments/${a.id}/progress`)}
-                className="rounded px-3 py-1 text-sm text-gray-600 hover:bg-gray-100"
+              </Button>
+              <Button
+                size="sm"
+                variant="ghost"
+                onClick={() =>
+                  router.push(`/teacher/assignments/${a.id}/progress`)
+                }
               >
                 Progress
-              </button>
-              <button
+              </Button>
+              <Button
+                size="sm"
+                variant="ghost"
+                className="text-brand"
                 onClick={() => router.push(`/teacher/assignments/${a.id}`)}
-                className="rounded px-3 py-1 text-sm text-blue-600 hover:bg-blue-50"
               >
                 Edit
-              </button>
-              <button
+              </Button>
+              <Button
+                size="sm"
+                variant="ghost"
+                className="text-danger"
                 onClick={() => handleDelete(a.id)}
-                className="rounded px-3 py-1 text-sm text-red-600 hover:bg-red-50"
               >
                 Delete
-              </button>
+              </Button>
             </div>
-          </li>
+          </Card>
         ))}
       </ul>
-    </div>
+    </Container>
   );
 }

@@ -12,6 +12,9 @@ const eslintConfig = defineConfig([
     "out/**",
     "build/**",
     "next-env.d.ts",
+    // Pyodide worker: plain ESM served verbatim from public/, deliberately
+    // outside the TS/lint world (loads Pyodide from a CDN URL import).
+    "public/**",
   ]),
 ]);
 

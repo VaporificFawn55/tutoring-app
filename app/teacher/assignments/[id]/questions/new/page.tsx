@@ -6,6 +6,9 @@ import { collection, addDoc, getDocs, query, orderBy } from "firebase/firestore"
 import { db } from "@/lib/firebase";
 import type { Question } from "@/lib/types";
 import QuestionForm, { type QuestionPayload } from "@/components/QuestionForm";
+import { Container } from "@/components/ui/Container";
+import { LoadingState } from "@/components/ui/LoadingState";
+import { PageHeader } from "@/components/ui/PageHeader";
 
 export default function NewQuestionPage() {
   const router = useRouter();
@@ -36,19 +39,15 @@ export default function NewQuestionPage() {
   }
 
   return (
-    <div className="max-w-lg mx-auto">
-      <div className="mb-6 flex items-center gap-3">
-        <button
-          onClick={() => router.push(`/teacher/assignments/${id}`)}
-          className="text-sm text-gray-500 hover:text-gray-900"
-        >
-          ← Assignment
-        </button>
-        <h1 className="text-xl font-semibold text-gray-900">Add Question</h1>
-      </div>
+    <Container width="narrow">
+      <PageHeader
+        title="Add Question"
+        backHref={`/teacher/assignments/${id}`}
+        backLabel="Assignment"
+      />
 
       {loading ? (
-        <p className="text-gray-500">Loading…</p>
+        <LoadingState />
       ) : (
         <QuestionForm
           existingQuestions={questions}
@@ -58,6 +57,6 @@ export default function NewQuestionPage() {
           onCancel={() => router.push(`/teacher/assignments/${id}`)}
         />
       )}
-    </div>
+    </Container>
   );
 }

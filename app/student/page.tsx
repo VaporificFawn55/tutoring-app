@@ -7,6 +7,11 @@ import { db } from "@/lib/firebase";
 import { useAuth } from "@/contexts/AuthContext";
 import { getScoreSummary, ScoreSummary } from "@/lib/scoring";
 import type { Assignment } from "@/lib/types";
+import { Badge } from "@/components/ui/Badge";
+import { Card } from "@/components/ui/Card";
+import { Container } from "@/components/ui/Container";
+import { EmptyState } from "@/components/ui/EmptyState";
+import { LoadingState } from "@/components/ui/LoadingState";
 
 type AssignmentRow = {
   assignment: Assignment;
@@ -29,7 +34,10 @@ export default function StudentDashboard() {
       );
       const assignments = snap.docs
         .map((d) => ({ id: d.id, ...d.data() }) as Assignment)
-        .sort((a, b) => a.order - b.order);
+        .sort(
+          (a, b) =>
+            (a.createdAt?.toMillis() ?? 0) - (b.createdAt?.toMillis() ?? 0)
+        );
       const rowsData = await Promise.all(
         assignments.map(async (a) => ({
           assignment: a,
@@ -42,82 +50,82 @@ export default function StudentDashboard() {
     load();
   }, [user]);
 
-  if (loading) return <p className="text-gray-500">Loading…</p>;
+  if (loading)
+    return (
+      <Container width="narrow">
+        <LoadingState />
+      </Container>
+    );
 
   return (
-    <div className="max-w-2xl mx-auto">
-      <h1 className="text-2xl font-semibold text-gray-900 mb-6">
-        Your Assignments
-      </h1>
-      {rows.length === 0 && (
-        <p className="text-gray-500">No assignments yet.</p>
-      )}
-      <ul className="space-y-3">
-        {rows.map(({ assignment, score }) => {
-          const status = score.submission?.status ?? null;
-          const hasFreeText = score.total > score.totalAutoGradable;
-          return (
-            <li key={assignment.id}>
-              <button
-                onClick={() =>
-                  router.push(`/student/assignments/${assignment.id}`)
-                }
-                className="w-full text-left rounded-lg border border-gray-200 bg-white px-5 py-4 hover:border-blue-400 hover:shadow-sm transition-shadow"
-              >
-                <div className="flex items-center justify-between gap-4">
-                  <div>
-                    <p className="font-medium text-gray-900">
-                      {assignment.title}
-                    </p>
-                    {assignment.description && (
-                      <p className="text-sm text-gray-500 mt-0.5">
-                        {assignment.description}
+    <Container width="narrow">
+      <h1 className="mb-6 text-2xl font-semibold text-ink">Your Assignments</h1>
+      {rows.length === 0 ? (
+        <EmptyState title="No assignments yet." />
+      ) : (
+        <ul className="space-y-3">
+          {rows.map(({ assignment, score }) => {
+            const status = score.submission?.status ?? null;
+            const hasFreeText = score.total > score.totalAutoGradable;
+            return (
+              <li key={assignment.id}>
+                <Card
+                  as="button"
+                  interactive
+                  onClick={() =>
+                    router.push(`/student/assignments/${assignment.id}`)
+                  }
+                  className="w-full text-left"
+                >
+                  <div className="flex items-center justify-between gap-4">
+                    <div>
+                      <p className="font-medium text-ink">
+                        {assignment.title}
                       </p>
-                    )}
-                  </div>
-                  <div className="shrink-0 flex flex-col items-end gap-1">
-                    {status === null && (
-                      <span className="text-xs font-medium rounded-full bg-gray-100 text-gray-600 px-2.5 py-0.5">
-                        Not started
-                      </span>
-                    )}
-                    {status === "in_progress" && (
-                      <>
-                        <span className="text-xs font-medium rounded-full bg-amber-100 text-amber-700 px-2.5 py-0.5">
-                          In progress
-                        </span>
-                        <span className="text-xs text-gray-500">
-                          Auto: {score.autoScore}/{score.totalAutoGradable}
-                        </span>
-                        {hasFreeText && (
-                          <span className="text-xs text-gray-500">
-                            Overall: {score.achieved}/{score.total}
+                      {assignment.description && (
+                        <p className="mt-0.5 text-sm text-ink-muted">
+                          {assignment.description}
+                        </p>
+                      )}
+                    </div>
+                    <div className="flex shrink-0 flex-col items-end gap-1">
+                      {status === null && (
+                        <Badge tone="neutral">Not started</Badge>
+                      )}
+                      {status === "in_progress" && (
+                        <>
+                          <Badge tone="warning">In progress</Badge>
+                          <span className="text-xs text-ink-muted">
+                            Auto: {score.autoScore}/{score.totalAutoGradable}
                           </span>
-                        )}
-                      </>
-                    )}
-                    {status === "completed" && (
-                      <>
-                        <span className="text-xs font-medium rounded-full bg-green-100 text-green-700 px-2.5 py-0.5">
-                          Completed
-                        </span>
-                        <span className="text-xs text-gray-500">
-                          Auto: {score.autoScore}/{score.totalAutoGradable}
-                        </span>
-                        {hasFreeText && (
-                          <span className="text-xs text-gray-500">
-                            Overall: {score.achieved}/{score.total}
+                          {hasFreeText && (
+                            <span className="text-xs text-ink-muted">
+                              Overall: {score.achieved}/{score.total}
+                            </span>
+                          )}
+                        </>
+                      )}
+                      {status === "completed" && (
+                        <>
+                          <Badge tone="success">Completed</Badge>
+                          <span className="text-xs text-ink-muted">
+                            Auto: {score.autoScore}/{score.totalAutoGradable}
                           </span>
-                        )}
-                      </>
-                    )}
+                          {hasFreeText && (
+                            <span className="text-xs text-ink-muted">
+                              Overall: {score.achieved}/{score.total}
+                            </span>
+                          )}
+                        </>
+                      )}
+                    </div>
                   </div>
-                </div>
-              </button>
-            </li>
-          );
-        })}
-      </ul>
-    </div>
+                </Card>
+              </li>
+            );
+          })}
+        </ul>
+      )}
+    </Container>
   );
 }

@@ -3,8 +3,7 @@
 import { useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { useAuth } from "@/contexts/AuthContext";
-import { signOut } from "firebase/auth";
-import { auth } from "@/lib/firebase";
+import { NavBar } from "@/components/ui/NavBar";
 
 export default function TeacherLayout({
   children,
@@ -23,16 +22,14 @@ export default function TeacherLayout({
   if (loading || !user || role !== "teacher") return null;
 
   return (
-    <div className="min-h-screen bg-gray-50">
-      <nav className="border-b border-gray-200 bg-white px-6 py-3 flex items-center justify-between">
-        <span className="font-semibold text-gray-900">Tutoring App — Teacher</span>
-        <button
-          onClick={() => signOut(auth).then(() => router.replace("/login"))}
-          className="text-sm text-gray-500 hover:text-gray-900"
-        >
-          Sign out
-        </button>
-      </nav>
+    <div className="min-h-screen bg-canvas">
+      <NavBar
+        brand="Tutoring App — Teacher"
+        links={[
+          { href: "/teacher", label: "Assignments" },
+          { href: "/teacher/review", label: "Review Queue" },
+        ]}
+      />
       <main className="p-6">{children}</main>
     </div>
   );

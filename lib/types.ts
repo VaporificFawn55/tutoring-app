@@ -4,7 +4,6 @@ export type Assignment = {
   id: string;
   title: string;
   description: string;
-  order: number;
   createdBy: string;
   createdAt: Timestamp;
   // Absent on legacy pre-feature docs — treat as unpublished (draft) wherever read.
@@ -15,8 +14,9 @@ export type QuestionType =
   | "multiple_choice"
   | "type_output"
   | "fill_blank"
-  | "fake_compiler"
-  | "free_text";
+  | "fake_compiler" // deprecated: still rendered, removed from the authoring UI
+  | "free_text"
+  | "code_exercise";
 
 export type Question = {
   id: string;
@@ -28,6 +28,12 @@ export type Question = {
   correctIndex?: number;
   correctAnswer?: string;
   manualGrade: boolean;
+  // code_exercise
+  starterCode?: string; // editor prefill
+  expectedStdout?: string; // auto-grade target; absent => manual grading
+  stdinInput?: string; // canned stdin fed to input()
+  // any code-bearing type: offer "Run this" (unused until wired)
+  runnable?: boolean;
 };
 
 export type Submission = {
@@ -49,4 +55,13 @@ export type Attempt = {
   gradedManually: boolean | null;
   timeSpentMs: number;
   createdAt: Timestamp;
+  // code_exercise
+  code?: string; // submitted source (also mirrored into `answer`)
+  stdout?: string; // captured output of the graded run
+  stderr?: string;
+  runCount?: number; // times Run was pressed before submitting
+  durationMs?: number; // wall time of the graded run
+  // manual grading (written in the grading view)
+  feedback?: string;
+  gradedAt?: Timestamp;
 };

@@ -5,13 +5,19 @@ import { useRouter } from "next/navigation";
 import { collection, addDoc, serverTimestamp } from "firebase/firestore";
 import { db } from "@/lib/firebase";
 import { useAuth } from "@/contexts/AuthContext";
+import { Alert } from "@/components/ui/Alert";
+import { Button } from "@/components/ui/Button";
+import { Container } from "@/components/ui/Container";
+import { Field } from "@/components/ui/Field";
+import { Input } from "@/components/ui/Input";
+import { PageHeader } from "@/components/ui/PageHeader";
+import { Textarea } from "@/components/ui/Textarea";
 
 export default function NewAssignmentPage() {
   const router = useRouter();
   const { user } = useAuth();
   const [title, setTitle] = useState("");
   const [description, setDescription] = useState("");
-  const [order, setOrder] = useState(1);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState("");
 
@@ -24,7 +30,6 @@ export default function NewAssignmentPage() {
       const ref = await addDoc(collection(db, "assignments"), {
         title: title.trim(),
         description: description.trim(),
-        order: Number(order),
         published: false,
         createdBy: user.uid,
         createdAt: serverTimestamp(),
@@ -37,69 +42,43 @@ export default function NewAssignmentPage() {
   }
 
   return (
-    <div className="max-w-lg mx-auto">
-      <div className="mb-6 flex items-center gap-3">
-        <button
-          onClick={() => router.push("/teacher")}
-          className="text-sm text-gray-500 hover:text-gray-900"
-        >
-          ← Assignments
-        </button>
-        <h1 className="text-xl font-semibold text-gray-900">New Assignment</h1>
-      </div>
+    <Container width="narrow">
+      <PageHeader
+        title="New Assignment"
+        backHref="/teacher"
+        backLabel="Assignments"
+      />
 
       <form onSubmit={handleSubmit} className="space-y-4">
-        <div>
-          <label className={labelClass}>Title</label>
-          <input
+        <Field label="Title">
+          <Input
             required
             value={title}
             onChange={(e) => setTitle(e.target.value)}
-            className={inputClass}
           />
-        </div>
-        <div>
-          <label className={labelClass}>Description</label>
-          <textarea
+        </Field>
+        <Field label="Description">
+          <Textarea
+            autoGrow
+            rows={3}
             value={description}
             onChange={(e) => setDescription(e.target.value)}
-            rows={3}
-            className={inputClass}
           />
-        </div>
-        <div>
-          <label className={labelClass}>Order</label>
-          <input
-            type="number"
-            required
-            min={1}
-            value={order}
-            onChange={(e) => setOrder(Number(e.target.value))}
-            className={`${inputClass} w-24`}
-          />
-        </div>
-        {error && <p className="text-sm text-red-600">{error}</p>}
+        </Field>
+        {error && <Alert tone="danger">{error}</Alert>}
         <div className="flex gap-3">
-          <button
-            type="submit"
-            disabled={saving}
-            className="rounded-md bg-blue-600 px-4 py-2 text-sm font-medium text-white hover:bg-blue-700 disabled:opacity-50"
-          >
-            {saving ? "Saving…" : "Create Assignment"}
-          </button>
-          <button
+          <Button type="submit" loading={saving} loadingLabel="Saving…">
+            Create Assignment
+          </Button>
+          <Button
             type="button"
+            variant="secondary"
             onClick={() => router.push("/teacher")}
-            className="rounded-md border border-gray-300 px-4 py-2 text-sm text-gray-700 hover:bg-gray-50"
           >
             Cancel
-          </button>
+          </Button>
         </div>
       </form>
-    </div>
+    </Container>
   );
 }
-
-const inputClass =
-  "block w-full rounded-md border border-gray-300 px-3 py-2 text-sm text-black shadow-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500";
-const labelClass = "block text-sm font-medium text-gray-700 mb-1";

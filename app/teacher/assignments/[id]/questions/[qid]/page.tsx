@@ -16,6 +16,10 @@ import {
 import { db } from "@/lib/firebase";
 import type { Question } from "@/lib/types";
 import QuestionForm, { type QuestionPayload } from "@/components/QuestionForm";
+import { Button } from "@/components/ui/Button";
+import { Container } from "@/components/ui/Container";
+import { LoadingState } from "@/components/ui/LoadingState";
+import { PageHeader } from "@/components/ui/PageHeader";
 
 export default function EditQuestionPage() {
   const router = useRouter();
@@ -71,6 +75,16 @@ export default function EditQuestionPage() {
         payload.correctIndex !== undefined
           ? payload.correctIndex
           : deleteField(),
+      starterCode:
+        payload.starterCode !== undefined
+          ? payload.starterCode
+          : deleteField(),
+      expectedStdout:
+        payload.expectedStdout !== undefined
+          ? payload.expectedStdout
+          : deleteField(),
+      stdinInput:
+        payload.stdinInput !== undefined ? payload.stdinInput : deleteField(),
     };
     await updateDoc(doc(db, "assignments", id, "questions", qid), update);
     router.push(`/teacher/assignments/${id}`);
@@ -82,28 +96,26 @@ export default function EditQuestionPage() {
     router.push(`/teacher/assignments/${id}`);
   }
 
-  if (loading) return <p className="text-gray-500">Loading…</p>;
+  if (loading)
+    return (
+      <Container width="narrow">
+        <LoadingState />
+      </Container>
+    );
   if (!question) return null;
 
   return (
-    <div className="max-w-lg mx-auto">
-      <div className="mb-6 flex items-center justify-between">
-        <div className="flex items-center gap-3">
-          <button
-            onClick={() => router.push(`/teacher/assignments/${id}`)}
-            className="text-sm text-gray-500 hover:text-gray-900"
-          >
-            ← Assignment
-          </button>
-          <h1 className="text-xl font-semibold text-gray-900">Edit Question</h1>
-        </div>
-        <button
-          onClick={handleDelete}
-          className="text-sm text-red-600 hover:text-red-800"
-        >
-          Delete
-        </button>
-      </div>
+    <Container width="narrow">
+      <PageHeader
+        title="Edit Question"
+        backHref={`/teacher/assignments/${id}`}
+        backLabel="Assignment"
+        actions={
+          <Button variant="ghost" className="text-danger" onClick={handleDelete}>
+            Delete
+          </Button>
+        }
+      />
 
       <QuestionForm
         existingQuestions={allQuestions}
@@ -117,11 +129,15 @@ export default function EditQuestionPage() {
           choices: question.choices,
           correctIndex: question.correctIndex,
           correctAnswer: question.correctAnswer,
+          starterCode: question.starterCode,
+          expectedStdout: question.expectedStdout,
+          stdinInput: question.stdinInput,
+          manualGrade: question.manualGrade,
         }}
         submitLabel="Save Changes"
         onSubmit={handleSubmit}
         onCancel={() => router.push(`/teacher/assignments/${id}`)}
       />
-    </div>
+    </Container>
   );
 }

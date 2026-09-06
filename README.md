@@ -59,7 +59,8 @@ review by hand. It's intentionally scoped to one teacher and one student.
 
 ## Environment variables
 
-Copy `.env.local.example` to `.env.local` and paste in the six Firebase config values:
+Copy `.env.local.example` to `.env.local` and fill in the six Firebase config
+values plus the two role emails:
 
 ```
 NEXT_PUBLIC_FIREBASE_API_KEY=
@@ -68,16 +69,16 @@ NEXT_PUBLIC_FIREBASE_PROJECT_ID=
 NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET=
 NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID=
 NEXT_PUBLIC_FIREBASE_APP_ID=
+NEXT_PUBLIC_TEACHER_EMAIL=
+NEXT_PUBLIC_STUDENT_EMAIL=
 ```
 
 ## Role configuration
 
-Open `lib/roles.ts` and replace the placeholder emails with the actual emails you created in Firebase Auth:
-
-```ts
-export const TEACHER_EMAIL = "your-teacher@example.com";
-export const STUDENT_EMAIL = "your-student@example.com";
-```
+Set `NEXT_PUBLIC_TEACHER_EMAIL` and `NEXT_PUBLIC_STUDENT_EMAIL` in `.env.local`
+to the actual emails of the two accounts you created in Firebase Auth
+(`lib/roles.ts` reads these env vars). Keep the same two emails in sync with the
+hard-coded values in `firestore.rules`.
 
 Roles are assigned the first time each user signs in — the app writes a `users/{uid}` doc with `role: "teacher"` or `role: "student"` based on the email match.
 
@@ -105,5 +106,5 @@ Open [http://localhost:3000](http://localhost:3000). Unauthenticated visitors ar
 
 1. Push to GitHub.
 2. Import the repo in [Vercel](https://vercel.com/new).
-3. Add all six `NEXT_PUBLIC_FIREBASE_*` environment variables in Vercel → Project Settings → Environment Variables.
+3. Add all six `NEXT_PUBLIC_FIREBASE_*` environment variables plus `NEXT_PUBLIC_TEACHER_EMAIL` and `NEXT_PUBLIC_STUDENT_EMAIL` in Vercel → Project Settings → Environment Variables.
 4. Deploy.
