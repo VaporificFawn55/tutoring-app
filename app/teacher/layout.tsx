@@ -27,7 +27,7 @@ export default function TeacherLayout({
         brand="Tutoring App — Teacher"
         links={[
           { href: "/teacher", label: "Assignments" },
-          { href: "/teacher/review", label: "Review Queue" },
+          { href: "/teacher/grading", label: "Grading" },
         ]}
       />
       <main className="p-6">{children}</main>

@@ -4,7 +4,6 @@ import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import {
   collection,
-  collectionGroup,
   getDocs,
   deleteDoc,
   doc,
@@ -13,6 +12,7 @@ import {
   updateDoc,
 } from "firebase/firestore";
 import { db } from "@/lib/firebase";
+import { getPendingAttempts } from "@/lib/grading";
 import type { Assignment } from "@/lib/types";
 import { Badge } from "@/components/ui/Badge";
 import { Button } from "@/components/ui/Button";
@@ -30,19 +30,14 @@ export default function TeacherDashboard() {
 
   useEffect(() => {
     async function load() {
-      const [aSnap, attSnap] = await Promise.all([
+      const [aSnap, pending] = await Promise.all([
         getDocs(query(collection(db, "assignments"), orderBy("createdAt"))),
-        getDocs(collectionGroup(db, "attempts")),
+        getPendingAttempts(),
       ]);
       setAssignments(
         aSnap.docs.map((d) => ({ id: d.id, ...d.data() }) as Assignment)
       );
-      setNeedsReviewCount(
-        attSnap.docs.filter((d) => {
-          const data = d.data();
-          return data.isCorrect === null && data.gradedManually === null;
-        }).length
-      );
+      setNeedsReviewCount(pending.length);
       setLoading(false);
     }
     load();
@@ -74,9 +69,9 @@ export default function TeacherDashboard() {
           <>
             <Button
               variant="secondary"
-              onClick={() => router.push("/teacher/review")}
+              onClick={() => router.push("/teacher/grading")}
             >
-              Review Queue
+              Grading
               {needsReviewCount > 0 && (
                 <Badge tone="warning" className="ml-2">
                   {needsReviewCount}
@@ -127,11 +122,9 @@ export default function TeacherDashboard() {
               <Button
                 size="sm"
                 variant="ghost"
-                onClick={() =>
-                  router.push(`/teacher/assignments/${a.id}/progress`)
-                }
+                onClick={() => router.push(`/teacher/grading/${a.id}`)}
               >
-                Progress
+                Grade
               </Button>
               <Button
                 size="sm"

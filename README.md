@@ -31,9 +31,17 @@ review by hand. It's intentionally scoped to one teacher and one student.
   - **Fill in the Blank** — supply the token that completes the code.
   - **Fake Compiler** — a terminal-styled snippet to reason about.
   - **Free Text** — an open-ended answer (not auto-graded).
-- **Review Queue** for grading free-text answers as correct/incorrect by hand,
-  with a badge showing how many answers are waiting.
-- **Progress view** per assignment showing the student's answers and scores.
+- **Grading inbox** listing every attempt awaiting manual review — free-text
+  answers and code exercises without an auto-grade target — as
+  correct/incorrect, with optional written feedback and a private grader note
+  per question. A badge shows how many are waiting.
+- **Per-assignment grading view** showing the student's full answer history
+  and scores, with inline grading for anything still pending.
+
+Grader notes are private to the teacher (stored outside the question doc a
+student ever reads) — but this app is client-only, so answer keys
+(`correctAnswer`, `expectedStdout`, etc.) are not hidden from a student who
+opens DevTools. Don't rely on them as a secret.
 
 ### Student
 - **Assignments dashboard** showing only published assignments, each with a

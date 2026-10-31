@@ -48,6 +48,13 @@ service cloud.firestore {
           get(/databases/$(database)/documents/assignments/$(aid)).data.published == true;
         allow write: if isTeacher();
       }
+
+      // Teacher-private per-question grading notes. Never readable by the
+      // student — this is a sibling doc, so the student's
+      // getDocs(.../questions) query never touches it.
+      match /private/{docId} {
+        allow read, write: if isTeacher();
+      }
     }
 
     match /submissions/{subId} {
