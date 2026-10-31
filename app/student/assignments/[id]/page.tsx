@@ -13,14 +13,17 @@ import {
   query,
   orderBy,
   serverTimestamp,
+  Timestamp,
 } from "firebase/firestore";
 import { db } from "@/lib/firebase";
 import { useAuth } from "@/contexts/AuthContext";
 import { getScoreSummary, ScoreSummary } from "@/lib/scoring";
-import { isAutoGradable, gradeCodeExercise } from "@/lib/questions";
-import type { Question, Submission } from "@/lib/types";
+import { isAutoGradable, gradeCodeExercise, normalizeOutput } from "@/lib/questions";
+import type { Attempt, Question, Submission } from "@/lib/types";
 import type { RunResult } from "@/lib/python/protocol";
 import { CodeRunner } from "@/components/code/CodeRunner";
+import { OutputPanel } from "@/components/code/OutputPanel";
+import { PythonEditor } from "@/components/code/PythonEditor";
 import { Alert } from "@/components/ui/Alert";
 import { Button } from "@/components/ui/Button";
 import { Card } from "@/components/ui/Card";
@@ -36,8 +39,11 @@ function grade(q: Question, answer: string): boolean | null {
   if (q.type === "free_text" || q.type === "code_exercise") return null;
   if (q.type === "multiple_choice")
     return Number(answer) === (q.correctIndex ?? -1);
+  // normalizeOutput handles multi-line answers (e.g. ASCII art) robustly —
+  // CRLF normalization, trailing-space-per-line and trailing-blank-line trim.
   return (
-    answer.trim().toLowerCase() === (q.correctAnswer ?? "").trim().toLowerCase()
+    normalizeOutput(answer).toLowerCase() ===
+    normalizeOutput(q.correctAnswer ?? "").toLowerCase()
   );
 }
 
@@ -45,11 +51,16 @@ export default function AssignmentRunnerPage() {
   const router = useRouter();
   const params = useParams();
   const id = params.id as string;
-  const { user } = useAuth();
+  const { user, role } = useAuth();
 
   const [loading, setLoading] = useState(true);
   const [questions, setQuestions] = useState<Question[]>([]);
   const [doneIds, setDoneIds] = useState<Set<string>>(new Set());
+  // The attempt that counted (correct, or submitted for manual review) per
+  // question — lets the student navigate back and see what they submitted.
+  const [attemptByQuestion, setAttemptByQuestion] = useState<
+    Record<string, Attempt>
+  >({});
   const [autoScore, setAutoScore] = useState(0);
   const [totalAutoGradable, setTotalAutoGradable] = useState(0);
   const [currentIdx, setCurrentIdx] = useState(0);
@@ -65,14 +76,22 @@ export default function AssignmentRunnerPage() {
   const [lastRun, setLastRun] = useState<
     { stdout: string; stderr: string; durationMs: number } | null
   >(null);
+  const [rerun, setRerun] = useState(false);
 
-  // Set once the runner finishes loading and again on every advance().
+  // Set once the runner finishes loading and again on every navigation.
   const questionStartTime = useRef(0);
-  const nextIdxRef = useRef(0);
   const subId = user ? `${user.uid}_${id}` : "";
 
   useEffect(() => {
     if (!user) return;
+    // The interactive runner writes to Firestore on mount (creates the
+    // submission doc) and on every submit. A previewing teacher must never
+    // trigger that on the real student's behalf — send them to the
+    // read-only review page instead.
+    if (role === "teacher") {
+      router.replace(`/student/assignments/${id}/review`);
+      return;
+    }
     async function load() {
       let assignmentSnap;
       try {
@@ -114,10 +133,19 @@ export default function AssignmentRunnerPage() {
         collection(db, "submissions", subId, "attempts")
       );
       const done = new Set<string>();
+      const counted: Record<string, Attempt> = {};
       attSnap.docs.forEach((d) => {
-        const data = d.data();
+        const data = { id: d.id, ...d.data() } as Attempt;
         if (data.isCorrect === true || data.isCorrect === null) {
-          done.add(data.questionId as string);
+          done.add(data.questionId);
+          const existing = counted[data.questionId];
+          if (
+            !existing ||
+            (data.createdAt?.toMillis?.() ?? 0) >=
+              (existing.createdAt?.toMillis?.() ?? 0)
+          ) {
+            counted[data.questionId] = data;
+          }
         }
       });
 
@@ -129,6 +157,7 @@ export default function AssignmentRunnerPage() {
       setQuestions(qs);
       setTotalAutoGradable(autoGradable);
       setDoneIds(done);
+      setAttemptByQuestion(counted);
       setAutoScore(resumeScore);
 
       const firstUndone = qs.findIndex((q) => !done.has(q.id));
@@ -139,7 +168,7 @@ export default function AssignmentRunnerPage() {
       questionStartTime.current = Date.now();
     }
     load();
-  }, [user, id, subId, router]);
+  }, [user, role, id, subId, router]);
 
   const allDone = !loading && doneIds.size === questions.length && questions.length > 0;
 
@@ -157,6 +186,41 @@ export default function AssignmentRunnerPage() {
       stderr: result.stderr,
       durationMs: result.durationMs,
     });
+  }
+
+  // Free navigation — lets the student flip through questions without
+  // answering them. Landing on a question that already has a counted
+  // attempt shows it read-only; landing on an unanswered one resets to a
+  // blank slate.
+  function goTo(target: number) {
+    if (target < 0 || target >= questions.length) return;
+    const q = questions[target];
+    const prior = attemptByQuestion[q.id];
+
+    setCurrentIdx(target);
+    setSubmitting(false);
+    setRerun(false);
+
+    if (prior) {
+      setFeedback(prior.isCorrect === null ? "submitted" : "correct");
+      setAnswer(prior.answer ?? "");
+      setSelectedChoice(Number(prior.answer) || 0);
+      setCode(prior.code ?? prior.answer ?? "");
+      setRunCount(prior.runCount ?? 1);
+      setLastRun({
+        stdout: prior.stdout ?? "",
+        stderr: prior.stderr ?? "",
+        durationMs: prior.durationMs ?? 0,
+      });
+    } else {
+      setFeedback("idle");
+      setAnswer("");
+      setSelectedChoice(0);
+      setCode(q.starterCode ?? "");
+      setRunCount(0);
+      setLastRun(null);
+    }
+    questionStartTime.current = Date.now();
   }
 
   async function handleSubmit() {
@@ -190,21 +254,38 @@ export default function AssignmentRunnerPage() {
       isCorrect = grade(question, answerValue);
     }
 
-    await addDoc(collection(db, "submissions", subId, "attempts"), {
-      questionId: question.id,
-      answer: answerValue,
-      isCorrect,
-      gradedManually: null,
-      timeSpentMs,
-      createdAt: serverTimestamp(),
-      ...extra,
-    });
+    const attemptRef = await addDoc(
+      collection(db, "submissions", subId, "attempts"),
+      {
+        questionId: question.id,
+        answer: answerValue,
+        isCorrect,
+        gradedManually: null,
+        timeSpentMs,
+        createdAt: serverTimestamp(),
+        ...extra,
+      }
+    );
 
     const newFeedback: Feedback =
       isCorrect === null ? "submitted" : isCorrect ? "correct" : "incorrect";
     setFeedback(newFeedback);
 
     if (isCorrect === true || isCorrect === null) {
+      setAttemptByQuestion((prev) => ({
+        ...prev,
+        [question.id]: {
+          id: attemptRef.id,
+          questionId: question.id,
+          answer: answerValue,
+          isCorrect,
+          gradedManually: null,
+          timeSpentMs,
+          createdAt: Timestamp.now(),
+          ...extra,
+        } as Attempt,
+      }));
+
       const newDone = new Set(doneIds);
       newDone.add(question.id);
 
@@ -213,8 +294,6 @@ export default function AssignmentRunnerPage() {
         return q && isAutoGradable(q);
       }).length;
 
-      const nextIdx = questions.findIndex((q) => !newDone.has(q.id));
-      nextIdxRef.current = nextIdx;
       const newAllDone = newDone.size === questions.length;
 
       const subRef = doc(db, "submissions", subId);
@@ -230,18 +309,6 @@ export default function AssignmentRunnerPage() {
     }
 
     setSubmitting(false);
-  }
-
-  function advance() {
-    const next = nextIdxRef.current;
-    setCurrentIdx(next);
-    setFeedback("idle");
-    setAnswer("");
-    setSelectedChoice(0);
-    setCode(questions[next]?.starterCode ?? "");
-    setRunCount(0);
-    setLastRun(null);
-    questionStartTime.current = Date.now();
   }
 
   if (loading)
@@ -271,12 +338,17 @@ export default function AssignmentRunnerPage() {
               Overall score: {finalScore.achieved}/{finalScore.total}
             </p>
           )}
-          <Button
-            className="mt-6"
-            onClick={() => router.push("/student")}
-          >
-            ← Back to assignments
-          </Button>
+          <div className="mt-6 flex justify-center gap-3">
+            <Button
+              variant="secondary"
+              onClick={() => router.push(`/student/assignments/${id}/review`)}
+            >
+              View your answers
+            </Button>
+            <Button onClick={() => router.push("/student")}>
+              ← Back to assignments
+            </Button>
+          </div>
         </Card>
       </Container>
     );
@@ -292,6 +364,26 @@ export default function AssignmentRunnerPage() {
         title={`Question ${currentIdx + 1} of ${questions.length}`}
         backHref="/student"
         backLabel="Assignments"
+        actions={
+          <>
+            <Button
+              size="sm"
+              variant="ghost"
+              disabled={currentIdx === 0}
+              onClick={() => goTo(currentIdx - 1)}
+            >
+              ← Previous
+            </Button>
+            <Button
+              size="sm"
+              variant="ghost"
+              disabled={currentIdx === questions.length - 1}
+              onClick={() => goTo(currentIdx + 1)}
+            >
+              Next →
+            </Button>
+          </>
+        }
       />
 
       <Card padding="lg" className="space-y-4">
@@ -312,21 +404,45 @@ export default function AssignmentRunnerPage() {
 
         {/* Answer input */}
         {question.type === "code_exercise" ? (
-          <div className="space-y-2">
-            <CodeRunner
-              key={question.id}
-              initialCode={question.starterCode ?? ""}
-              stdin={question.stdinInput}
-              readOnly={codeLocked}
-              onCodeChange={setCode}
-              onRun={handleCodeRun}
-            />
-            {feedback === "idle" && runCount === 0 && (
-              <p className="text-xs text-ink-muted">
-                Run your code at least once before submitting.
-              </p>
-            )}
-          </div>
+          codeLocked ? (
+            <div className="space-y-2">
+              <PythonEditor value={code} readOnly />
+              <OutputPanel
+                stdout={lastRun?.stdout ?? ""}
+                stderr={lastRun?.stderr ?? ""}
+                status="idle"
+              />
+              {rerun ? (
+                <CodeRunner
+                  key={`rerun-${question.id}`}
+                  initialCode={code}
+                  stdin={question.stdinInput}
+                  showStdin={false}
+                  readOnly
+                  autoRun
+                />
+              ) : (
+                <Button size="sm" variant="ghost" onClick={() => setRerun(true)}>
+                  Re-run
+                </Button>
+              )}
+            </div>
+          ) : (
+            <div className="space-y-2">
+              <CodeRunner
+                key={question.id}
+                initialCode={question.starterCode ?? ""}
+                stdin={question.stdinInput}
+                onCodeChange={setCode}
+                onRun={handleCodeRun}
+              />
+              {feedback === "idle" && runCount === 0 && (
+                <p className="text-xs text-ink-muted">
+                  Run your code at least once before submitting.
+                </p>
+              )}
+            </div>
+          )
         ) : question.type === "multiple_choice" && question.choices ? (
           <fieldset className="space-y-2">
             {question.choices.map((choice, i) => (
@@ -356,7 +472,7 @@ export default function AssignmentRunnerPage() {
             rows={4}
             placeholder="Your answer…"
           />
-        ) : (
+        ) : question.type === "fill_blank" ? (
           <Input
             type="text"
             value={answer}
@@ -367,6 +483,18 @@ export default function AssignmentRunnerPage() {
                 handleSubmit();
               }
             }}
+            placeholder="Your answer…"
+          />
+        ) : (
+          // type_output / fake_compiler — multi-line so predictions can
+          // include ASCII art, not just a single line of text.
+          <Textarea
+            autoGrow
+            value={answer}
+            onChange={(e) => setAnswer(e.target.value)}
+            disabled={inputDisabled}
+            rows={4}
+            className="font-mono text-sm"
             placeholder="Your answer…"
           />
         )}
@@ -395,7 +523,7 @@ export default function AssignmentRunnerPage() {
             </Button>
           )}
           {(feedback === "correct" || feedback === "submitted") && (
-            <Button onClick={advance}>Next →</Button>
+            <Button onClick={() => goTo(currentIdx + 1)}>Next →</Button>
           )}
           {feedback === "incorrect" && (
             <Button

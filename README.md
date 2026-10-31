@@ -27,7 +27,8 @@ review by hand. It's intentionally scoped to one teacher and one student.
 - **Publish / un-publish** each assignment to control what the student can see.
 - **Add, edit, and order questions** within an assignment, in five formats:
   - **Multiple Choice** — pick the correct option.
-  - **Type Output** — predict the output of a Python snippet.
+  - **Type Output** — predict the output of a Python snippet (multi-line,
+    so expected output can be ASCII art, not just one line).
   - **Fill in the Blank** — supply the token that completes the code.
   - **Fake Compiler** — a terminal-styled snippet to reason about.
   - **Free Text** — an open-ended answer (not auto-graded).
@@ -37,6 +38,19 @@ review by hand. It's intentionally scoped to one teacher and one student.
   per question. A badge shows how many are waiting.
 - **Per-assignment grading view** showing the student's full answer history
   and scores, with inline grading for anything still pending.
+- **Lessons** — author an ordered sequence of text and Python code blocks,
+  mark individual code blocks runnable, and publish / un-publish each lesson
+  independently of assignments.
+- **Mark assignments completed** — an Active / Completed tab split, separate
+  from publish state, so finished assignments stop cluttering the main list.
+  Fully manual (a "Mark Completed" / "Restore" button) and independent of the
+  student's own per-assignment progress.
+- **View as Student** — a nav link that drops the teacher into the student's
+  dashboard, lessons, and assignment review views showing the real student's
+  actual data (their real progress, scores, submitted answers). It's
+  read-only: the teacher is routed to the review page instead of the live
+  question runner, so nothing can be submitted or changed on the student's
+  behalf while previewing.
 
 Grader notes are private to the teacher (stored outside the question doc a
 student ever reads) — but this app is client-only, so answer keys
@@ -48,12 +62,28 @@ opens DevTools. Don't rely on them as a secret.
   status badge (Not started / In progress / Completed) and score so far.
 - **Question runner** that presents one question at a time and preserves the
   formatting of the prompt exactly as the teacher wrote it.
+- **Free navigation** — Previous / Next controls let the student flip through
+  every question in an assignment without being forced to answer, to preview
+  or revisit any of them.
 - **Instant auto-grading** for all question types except free text, with
   correct / try-again / submitted feedback.
 - **Resume support** — progress is saved per question, so the student picks up
   where they left off.
 - **Completion summary** with an auto-graded score plus an overall score once
   any free-text answers have been reviewed.
+- **Review completed assignments** — a dedicated page per assignment showing
+  exactly what was submitted for every question (including re-runnable code
+  and captured output), its correct/incorrect status, and any written
+  feedback from the teacher. The dashboard lists completed assignments
+  separately from active ones and links straight into this view.
+- **Python Playground** — a sandbox to run Python outside of any assignment.
+  Nothing written there is graded or saved.
+- **Lessons library** — browse published lessons and run any code block
+  marked runnable right in the browser.
+
+Code written anywhere (the Playground, code-exercise questions, lesson code
+blocks) is syntax-highlighted like a native Python editor (keywords, strings,
+comments, numbers).
 
 ## Firebase project setup
 

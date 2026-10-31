@@ -277,14 +277,30 @@ export default function QuestionForm({
               ? "Correct token (fills the blank)"
               : "Expected output"
           }
-          hint="Graded case-insensitively with leading/trailing whitespace trimmed."
+          hint={
+            type === "fill_blank"
+              ? "Graded case-insensitively with leading/trailing whitespace trimmed."
+              : "Graded case-insensitively, line by line — supports multi-line output like ASCII art."
+          }
         >
-          <Input
-            required
-            value={correctAnswer}
-            onChange={(e) => setCorrectAnswer(e.target.value)}
-            placeholder={type === "fill_blank" ? "len" : "hello"}
-          />
+          {type === "fill_blank" ? (
+            <Input
+              required
+              value={correctAnswer}
+              onChange={(e) => setCorrectAnswer(e.target.value)}
+              placeholder="len"
+            />
+          ) : (
+            <Textarea
+              autoGrow
+              required
+              rows={3}
+              value={correctAnswer}
+              onChange={(e) => setCorrectAnswer(e.target.value)}
+              className="font-mono text-xs leading-relaxed"
+              placeholder={"hello\n  /\\_/\\\n ( o.o )\n  > ^ <"}
+            />
+          )}
         </Field>
       )}
 

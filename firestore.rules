@@ -39,6 +39,11 @@ service cloud.firestore {
       // No update/delete — the app never modifies this doc after creation.
     }
 
+    match /lessons/{lid} {
+      allow read: if isTeacher() || resource.data.published == true;
+      allow write: if isTeacher();
+    }
+
     match /assignments/{aid} {
       allow read: if isTeacher() || resource.data.published == true;
       allow write: if isTeacher();

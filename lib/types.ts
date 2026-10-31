@@ -8,6 +8,9 @@ export type Assignment = {
   createdAt: Timestamp;
   // Absent on legacy pre-feature docs — treat as unpublished (draft) wherever read.
   published?: boolean;
+  // Teacher-only archival flag, shown as "Completed" in the teacher UI.
+  // Unrelated to the student's per-submission completion status.
+  archived?: boolean;
 };
 
 export type QuestionType =
@@ -64,4 +67,21 @@ export type Attempt = {
   // manual grading (written in the grading view)
   feedback?: string;
   gradedAt?: Timestamp;
+};
+
+export type LessonBlock =
+  | { kind: "text"; text: string }
+  | { kind: "code"; code: string; runnable: boolean; language: "python" };
+
+export type Lesson = {
+  id: string;
+  title: string;
+  summary: string;
+  order: number;
+  blocks: LessonBlock[];
+  tags?: string[];
+  published: boolean;
+  createdBy: string;
+  createdAt: Timestamp;
+  updatedAt?: Timestamp;
 };

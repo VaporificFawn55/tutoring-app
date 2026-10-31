@@ -18,15 +18,19 @@ import { Badge } from "@/components/ui/Badge";
 import { Button } from "@/components/ui/Button";
 import { Card } from "@/components/ui/Card";
 import { Container } from "@/components/ui/Container";
+import { cx } from "@/components/ui/cx";
 import { EmptyState } from "@/components/ui/EmptyState";
 import { LoadingState } from "@/components/ui/LoadingState";
 import { PageHeader } from "@/components/ui/PageHeader";
+
+type Tab = "active" | "completed";
 
 export default function TeacherDashboard() {
   const router = useRouter();
   const [assignments, setAssignments] = useState<Assignment[]>([]);
   const [needsReviewCount, setNeedsReviewCount] = useState(0);
   const [loading, setLoading] = useState(true);
+  const [tab, setTab] = useState<Tab>("active");
 
   useEffect(() => {
     async function load() {
@@ -51,6 +55,14 @@ export default function TeacherDashboard() {
     );
   }
 
+  async function toggleArchived(a: Assignment) {
+    const archived = !(a.archived === true);
+    await updateDoc(doc(db, "assignments", a.id), { archived });
+    setAssignments((prev) =>
+      prev.map((x) => (x.id === a.id ? { ...x, archived } : x))
+    );
+  }
+
   async function handleDelete(id: string) {
     if (!confirm("Delete this assignment and all its questions?")) return;
     const qSnap = await getDocs(
@@ -60,6 +72,10 @@ export default function TeacherDashboard() {
     await deleteDoc(doc(db, "assignments", id));
     setAssignments((prev) => prev.filter((a) => a.id !== id));
   }
+
+  const active = assignments.filter((a) => a.archived !== true);
+  const completed = assignments.filter((a) => a.archived === true);
+  const visible = tab === "active" ? active : completed;
 
   return (
     <Container>
@@ -85,17 +101,42 @@ export default function TeacherDashboard() {
         }
       />
 
+      <div className="mb-4 flex gap-5 border-b border-border">
+        {([
+          ["active", "Active", active.length],
+          ["completed", "Completed", completed.length],
+        ] as [Tab, string, number][]).map(([t, label, count]) => (
+          <button
+            key={t}
+            onClick={() => setTab(t)}
+            className={cx(
+              "border-b-2 px-0.5 pb-2 text-sm font-medium",
+              tab === t
+                ? "border-brand text-ink"
+                : "border-transparent text-ink-muted hover:text-ink"
+            )}
+          >
+            {label}
+            {count > 0 && (
+              <span className="ml-1.5 text-xs text-ink-subtle">{count}</span>
+            )}
+          </button>
+        ))}
+      </div>
+
       {loading && <LoadingState />}
 
-      {!loading && assignments.length === 0 && (
+      {!loading && visible.length === 0 && (
         <EmptyState
-          title="No assignments yet."
-          description="Create one to get started."
+          title={
+            tab === "active" ? "No assignments yet." : "Nothing completed yet."
+          }
+          description={tab === "active" ? "Create one to get started." : undefined}
         />
       )}
 
       <ul className="space-y-2">
-        {assignments.map((a) => (
+        {visible.map((a) => (
           <Card
             key={a.id}
             as="li"
@@ -133,6 +174,9 @@ export default function TeacherDashboard() {
                 onClick={() => router.push(`/teacher/assignments/${a.id}`)}
               >
                 Edit
+              </Button>
+              <Button size="sm" variant="ghost" onClick={() => toggleArchived(a)}>
+                {a.archived === true ? "Restore" : "Mark Completed"}
               </Button>
               <Button
                 size="sm"
