@@ -39,18 +39,23 @@ service cloud.firestore {
       // No update/delete — the app never modifies this doc after creation.
     }
 
+    // Published content is readable only by the signed-in student — not by
+    // anonymous visitors or stray accounts made with the public API key.
     match /lessons/{lid} {
-      allow read: if isTeacher() || resource.data.published == true;
+      allow read: if isTeacher() ||
+        (isStudent() && resource.data.published == true);
       allow write: if isTeacher();
     }
 
     match /assignments/{aid} {
-      allow read: if isTeacher() || resource.data.published == true;
+      allow read: if isTeacher() ||
+        (isStudent() && resource.data.published == true);
       allow write: if isTeacher();
 
       match /questions/{qid} {
         allow read: if isTeacher() ||
-          get(/databases/$(database)/documents/assignments/$(aid)).data.published == true;
+          (isStudent() &&
+           get(/databases/$(database)/documents/assignments/$(aid)).data.published == true);
         allow write: if isTeacher();
       }
 
@@ -62,22 +67,68 @@ service cloud.firestore {
       }
     }
 
+    // NOTE: correctness is still decided in the student's browser, so these
+    // rules narrow what a student can forge (no grading fields, no edits
+    // after completion, score moves +1 at a time) but cannot fully prevent
+    // a fake isCorrect. Real fix: grade server-side.
     match /submissions/{subId} {
       allow read: if isTeacher() ||
         (isStudent() && subId.matches(request.auth.uid + '_.*'));
 
-      allow write: if isTeacher() ||
-        (isStudent() && subId.matches(request.auth.uid + '_.*') &&
-         request.resource.data.studentUid == request.auth.uid);
+      allow write: if isTeacher();
+
+      // Student starts a submission: fresh, zero score, own uid/assignment.
+      allow create: if isStudent() &&
+        subId == request.auth.uid + '_' + request.resource.data.assignmentId &&
+        request.resource.data.keys().hasOnly(
+          ['studentUid', 'assignmentId', 'status', 'autoScore',
+           'totalAutoGradable', 'startedAt']) &&
+        request.resource.data.studentUid == request.auth.uid &&
+        request.resource.data.status == "in_progress" &&
+        request.resource.data.autoScore == 0 &&
+        request.resource.data.totalAutoGradable is int &&
+        request.resource.data.startedAt == request.time;
+
+      // Student progress update: only score/status/completedAt, only while
+      // in progress, score rises by at most one per write. (No cap at
+      // totalAutoGradable: that value is stale if questions are added
+      // after the submission starts.)
+      allow update: if isStudent() &&
+        resource.data.studentUid == request.auth.uid &&
+        resource.data.status == "in_progress" &&
+        request.resource.data.diff(resource.data).affectedKeys()
+          .hasOnly(['autoScore', 'status', 'completedAt']) &&
+        request.resource.data.autoScore is int &&
+        request.resource.data.autoScore >= resource.data.autoScore &&
+        request.resource.data.autoScore <= resource.data.autoScore + 1 &&
+        request.resource.data.status in ['in_progress', 'completed'] &&
+        (!('completedAt' in request.resource.data) ||
+         request.resource.data.completedAt == request.time);
     }
 
     // Separate top-level rule (not nested under /submissions) so it also
     // covers collectionGroup('attempts') queries, which nested match blocks
     // do not automatically apply to.
     match /{path=**}/attempts/{attemptId} {
-      allow read, write: if isTeacher() ||
+      allow read: if isTeacher() ||
         (isStudent() &&
          get(/databases/$(database)/documents/$(path)).data.studentUid == request.auth.uid);
+
+      // Teacher grades (gradedManually / feedback / gradedAt).
+      allow write: if isTeacher();
+
+      // Student may only append new attempts to their own in-progress
+      // submission, for a real question, with no grading fields set.
+      // No update/delete, so graded attempts can't be altered afterwards.
+      allow create: if isStudent() &&
+        get(/databases/$(database)/documents/$(path)).data.studentUid == request.auth.uid &&
+        get(/databases/$(database)/documents/$(path)).data.status == "in_progress" &&
+        exists(/databases/$(database)/documents/assignments/$(get(/databases/$(database)/documents/$(path)).data.assignmentId)/questions/$(request.resource.data.questionId)) &&
+        request.resource.data.keys().hasOnly(
+          ['questionId', 'answer', 'isCorrect', 'gradedManually', 'timeSpentMs',
+           'createdAt', 'code', 'stdout', 'stderr', 'runCount', 'durationMs']) &&
+        request.resource.data.gradedManually == null &&
+        request.resource.data.createdAt == request.time;
     }
   }
 }
