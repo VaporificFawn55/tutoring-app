@@ -355,11 +355,12 @@ export default function AssignmentRunnerPage() {
   }
 
   const question = questions[currentIdx];
+  const isCodingQuestion = question.type === "code_exercise";
   const inputDisabled = feedback !== "idle" || submitting;
   const codeLocked = feedback === "correct" || feedback === "submitted";
 
   return (
-    <Container width="wide">
+    <Container width={isCodingQuestion ? "workspace" : "wide"}>
       <PageHeader
         title={`Question ${currentIdx + 1} of ${questions.length}`}
         backHref="/student"
@@ -386,157 +387,174 @@ export default function AssignmentRunnerPage() {
         }
       />
 
-      <Card padding="lg" className="space-y-4">
-        <p className="whitespace-pre-wrap font-medium text-ink">
-          {question.prompt}
-        </p>
+      <div className={isCodingQuestion ? "grid items-start gap-4 lg:grid-cols-[minmax(0,2fr)_minmax(0,3fr)]" : undefined}>
+        {isCodingQuestion && (
+          <Card as="section" padding="none" aria-labelledby="question-prompt-heading" className="min-w-0 overflow-hidden lg:sticky lg:top-6">
+            <h2 id="question-prompt-heading" className="border-b border-border bg-canvas px-5 py-3 text-sm font-semibold text-ink">
+              Question
+            </h2>
+            <p className="whitespace-pre-wrap wrap-anywhere px-5 py-4 text-ink lg:max-h-[70vh] lg:overflow-auto">
+              {question.prompt}
+            </p>
+          </Card>
+        )}
 
-        {/* Code display */}
-        {question.type === "type_output" || question.type === "fill_blank" ? (
-          <pre className="whitespace-pre-wrap rounded bg-canvas p-3 font-mono text-sm text-ink">
-            {question.code}
-          </pre>
-        ) : question.type === "fake_compiler" ? (
-          <pre className="whitespace-pre-wrap rounded bg-code-bg p-3 font-mono text-sm text-code-fg">
-            {question.code}
-          </pre>
-        ) : null}
-
-        {/* Answer input */}
-        {question.type === "code_exercise" ? (
-          codeLocked ? (
-            <div className="space-y-2">
-              <PythonEditor value={code} readOnly />
-              <OutputPanel
-                stdout={lastRun?.stdout ?? ""}
-                stderr={lastRun?.stderr ?? ""}
-                status="idle"
-              />
-              {rerun ? (
-                <CodeRunner
-                  key={`rerun-${question.id}`}
-                  initialCode={code}
-                  stdin={question.stdinInput}
-                  showStdin={false}
-                  readOnly
-                  autoRun
-                />
-              ) : (
-                <Button size="sm" variant="ghost" onClick={() => setRerun(true)}>
-                  Re-run
-                </Button>
-              )}
-            </div>
+        <Card padding="lg" className="min-w-0 space-y-4">
+          {isCodingQuestion ? (
+            <h2 className="text-sm font-semibold text-ink">Python editor</h2>
           ) : (
-            <div className="space-y-2">
-              <CodeRunner
-                key={question.id}
-                initialCode={question.starterCode ?? ""}
-                stdin={question.stdinInput}
-                onCodeChange={setCode}
-                onRun={handleCodeRun}
-              />
-              {feedback === "idle" && runCount === 0 && (
-                <p className="text-xs text-ink-muted">
-                  Run your code at least once before submitting.
-                </p>
-              )}
-            </div>
-          )
-        ) : question.type === "multiple_choice" && question.choices ? (
-          <fieldset className="space-y-2">
-            {question.choices.map((choice, i) => (
-              <label
-                key={i}
-                className="flex cursor-pointer items-center gap-3"
-              >
-                <input
-                  type="radio"
-                  name="choice"
-                  value={i}
-                  checked={selectedChoice === i}
-                  onChange={() => setSelectedChoice(i)}
-                  disabled={inputDisabled}
-                  className="accent-brand"
-                />
-                <span className="text-sm text-ink">{choice}</span>
-              </label>
-            ))}
-          </fieldset>
-        ) : question.type === "free_text" ? (
-          <Textarea
-            autoGrow
-            value={answer}
-            onChange={(e) => setAnswer(e.target.value)}
-            disabled={inputDisabled}
-            rows={4}
-            placeholder="Your answer…"
-          />
-        ) : question.type === "fill_blank" ? (
-          <Input
-            type="text"
-            value={answer}
-            onChange={(e) => setAnswer(e.target.value)}
-            disabled={inputDisabled}
-            onKeyDown={(e) => {
-              if (e.key === "Enter" && feedback === "idle" && !submitting) {
-                handleSubmit();
-              }
-            }}
-            placeholder="Your answer…"
-          />
-        ) : (
-          // type_output / fake_compiler — multi-line so predictions can
-          // include ASCII art, not just a single line of text.
-          <Textarea
-            autoGrow
-            value={answer}
-            onChange={(e) => setAnswer(e.target.value)}
-            disabled={inputDisabled}
-            rows={4}
-            className="font-mono text-sm"
-            placeholder="Your answer…"
-          />
-        )}
-
-        {/* Feedback */}
-        {feedback === "correct" && (
-          <Alert tone="success">Correct!</Alert>
-        )}
-        {feedback === "incorrect" && (
-          <Alert tone="danger">Incorrect — try again.</Alert>
-        )}
-        {feedback === "submitted" && (
-          <Alert tone="info">Answer submitted for review.</Alert>
-        )}
-
-        {/* Actions */}
-        <div className="flex gap-3 pt-1">
-          {feedback === "idle" && (
-            <Button
-              onClick={handleSubmit}
-              loading={submitting}
-              loadingLabel="Submitting…"
-              disabled={question.type === "code_exercise" && runCount === 0}
-            >
-              Submit
-            </Button>
+            <p className="whitespace-pre-wrap font-medium text-ink">
+              {question.prompt}
+            </p>
           )}
-          {(feedback === "correct" || feedback === "submitted") && (
-            <Button onClick={() => goTo(currentIdx + 1)}>Next →</Button>
+
+          {/* Code display */}
+          {question.type === "type_output" || question.type === "fill_blank" ? (
+            <pre className="whitespace-pre-wrap rounded bg-canvas p-3 font-mono text-sm text-ink">
+              {question.code}
+            </pre>
+          ) : question.type === "fake_compiler" ? (
+            <pre className="whitespace-pre-wrap rounded bg-code-bg p-3 font-mono text-sm text-code-fg">
+              {question.code}
+            </pre>
+          ) : null}
+
+          {/* Answer input */}
+          {isCodingQuestion ? (
+            codeLocked ? (
+              <div className="space-y-2">
+                <PythonEditor value={code} readOnly />
+                <OutputPanel
+                  stdout={lastRun?.stdout ?? ""}
+                  stderr={lastRun?.stderr ?? ""}
+                  status="idle"
+                />
+                {rerun ? (
+                  <CodeRunner
+                    key={`rerun-${question.id}`}
+                    initialCode={code}
+                    stdin={question.stdinInput}
+                    showStdin={false}
+                    readOnly
+                    autoRun
+                  />
+                ) : (
+                  <Button size="sm" variant="ghost" onClick={() => setRerun(true)}>
+                    Re-run
+                  </Button>
+                )}
+              </div>
+            ) : (
+              <div className="space-y-2">
+                <CodeRunner
+                  key={question.id}
+                  initialCode={question.starterCode ?? ""}
+                  stdin={question.stdinInput}
+                  onCodeChange={setCode}
+                  onRun={handleCodeRun}
+                />
+                {feedback === "idle" && runCount === 0 && (
+                  <p className="text-xs text-ink-muted">
+                    Run your code at least once before submitting.
+                  </p>
+                )}
+              </div>
+            )
+          ) : question.type === "multiple_choice" && question.choices ? (
+            <fieldset className="space-y-2">
+              {question.choices.map((choice, i) => (
+                <label
+                  key={i}
+                  className="flex cursor-pointer items-center gap-3"
+                >
+                  <input
+                    type="radio"
+                    name="choice"
+                    value={i}
+                    checked={selectedChoice === i}
+                    onChange={() => setSelectedChoice(i)}
+                    disabled={inputDisabled}
+                    className="accent-brand"
+                  />
+                  <span className="text-sm text-ink">{choice}</span>
+                </label>
+              ))}
+            </fieldset>
+          ) : question.type === "free_text" ? (
+            <Textarea
+              autoGrow
+              value={answer}
+              onChange={(e) => setAnswer(e.target.value)}
+              disabled={inputDisabled}
+              rows={4}
+              placeholder="Your answer…"
+            />
+          ) : question.type === "fill_blank" ? (
+            <Input
+              type="text"
+              value={answer}
+              onChange={(e) => setAnswer(e.target.value)}
+              disabled={inputDisabled}
+              onKeyDown={(e) => {
+                if (e.key === "Enter" && feedback === "idle" && !submitting) {
+                  handleSubmit();
+                }
+              }}
+              placeholder="Your answer…"
+            />
+          ) : (
+            // type_output / fake_compiler — multi-line so predictions can
+            // include ASCII art, not just a single line of text.
+            <Textarea
+              autoGrow
+              value={answer}
+              onChange={(e) => setAnswer(e.target.value)}
+              disabled={inputDisabled}
+              rows={4}
+              className="font-mono text-sm"
+              placeholder="Your answer…"
+            />
+          )}
+
+          {/* Feedback */}
+          {feedback === "correct" && (
+            <Alert tone="success">Correct!</Alert>
           )}
           {feedback === "incorrect" && (
-            <Button
-              variant="secondary"
-              onClick={() => {
-                setFeedback("idle");
-              }}
-            >
-              Try again
-            </Button>
+            <Alert tone="danger">Incorrect — try again.</Alert>
           )}
-        </div>
-      </Card>
+          {feedback === "submitted" && (
+            <Alert tone="info">Answer submitted for review.</Alert>
+          )}
+
+          {/* Actions */}
+          <div className="flex gap-3 pt-1">
+            {feedback === "idle" && (
+              <Button
+                onClick={handleSubmit}
+                loading={submitting}
+                loadingLabel="Submitting…"
+                disabled={isCodingQuestion && runCount === 0}
+              >
+                Submit
+              </Button>
+            )}
+            {(feedback === "correct" || feedback === "submitted") && (
+              <Button onClick={() => goTo(currentIdx + 1)}>Next →</Button>
+            )}
+            {feedback === "incorrect" && (
+              <Button
+                variant="secondary"
+                onClick={() => {
+                  setFeedback("idle");
+                }}
+              >
+                Try again
+              </Button>
+            )}
+          </div>
+        </Card>
+      </div>
     </Container>
   );
 }
