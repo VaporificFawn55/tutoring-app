@@ -11,6 +11,8 @@ export { PageHeader } from "./PageHeader";
 export type { PageHeaderProps } from "./PageHeader";
 export { NavBar } from "./NavBar";
 export type { NavBarProps, NavLinkItem } from "./NavBar";
+export { ThemeToggle } from "./ThemeToggle";
+export type { ThemeToggleProps } from "./ThemeToggle";
 export { EmptyState } from "./EmptyState";
 export type { EmptyStateProps } from "./EmptyState";
 export { LoadingState } from "./LoadingState";

@@ -4,6 +4,8 @@ import { useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { useAuth } from "@/contexts/AuthContext";
 import { NavBar } from "@/components/ui/NavBar";
+import { ThemeToggle } from "@/components/ui/ThemeToggle";
+import { ThemeContext, useStoredTheme } from "@/contexts/ThemeContext";
 
 export default function TeacherLayout({
   children,
@@ -12,6 +14,7 @@ export default function TeacherLayout({
 }) {
   const { user, role, loading } = useAuth();
   const router = useRouter();
+  const [theme, setTheme] = useStoredTheme();
 
   useEffect(() => {
     if (!loading && (!user || role !== "teacher")) {
@@ -22,7 +25,8 @@ export default function TeacherLayout({
   if (loading || !user || role !== "teacher") return null;
 
   return (
-    <div className="min-h-screen bg-canvas">
+    <ThemeContext.Provider value={theme}>
+    <div data-theme={theme} className="min-h-screen bg-canvas">
       <NavBar
         brand="Tutoring App — Teacher"
         links={[
@@ -31,8 +35,10 @@ export default function TeacherLayout({
           { href: "/teacher/grading", label: "Grading" },
           { href: "/student", label: "View as Student" },
         ]}
+        actions={<ThemeToggle theme={theme} onChange={setTheme} />}
       />
       <main className="p-6">{children}</main>
     </div>
+    </ThemeContext.Provider>
   );
 }

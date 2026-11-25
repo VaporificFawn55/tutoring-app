@@ -4,6 +4,8 @@ import { useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { useAuth } from "@/contexts/AuthContext";
 import { NavBar } from "@/components/ui/NavBar";
+import { ThemeToggle } from "@/components/ui/ThemeToggle";
+import { ThemeContext, useStoredTheme } from "@/contexts/ThemeContext";
 
 export default function StudentLayout({
   children,
@@ -12,6 +14,7 @@ export default function StudentLayout({
 }) {
   const { user, role, loading } = useAuth();
   const router = useRouter();
+  const [theme, setTheme] = useStoredTheme();
 
   useEffect(() => {
     if (!loading && (!user || (role !== "student" && role !== "teacher"))) {
@@ -27,8 +30,10 @@ export default function StudentLayout({
   const previewing = role === "teacher";
 
   return (
-    <div className="min-h-screen bg-canvas">
+    <ThemeContext.Provider value={theme}>
+    <div data-theme={theme} className="min-h-screen bg-canvas">
       <NavBar
+        actions={<ThemeToggle theme={theme} onChange={setTheme} />}
         brand={
           previewing
             ? "Tutoring App — Student view (previewing)"
@@ -43,5 +48,6 @@ export default function StudentLayout({
       />
       <main className="p-6">{children}</main>
     </div>
+    </ThemeContext.Provider>
   );
 }

@@ -27,6 +27,30 @@
   --radius-card: 0.75rem;
 }
 
+/* Dark palette, applied to a subtree (the student view) via data-theme.
+   Utilities read these variables, so everything token-based follows. */
+[data-theme="dark"] {
+  color-scheme: dark;
+  --color-canvas: #0b1120;
+  --color-surface: #111827;
+  --color-border: #2a3441;
+  --color-ink: #e5e7eb;
+  --color-ink-muted: #9ca3af;
+  --color-ink-subtle: #6b7280;
+  --color-brand: #3b82f6;
+  --color-brand-hover: #2563eb;
+  --color-brand-soft: #172554;
+  --color-success: #16a34a;
+  --color-success-soft: #052e16;
+  --color-warning: #f59e0b;
+  --color-warning-soft: #451a03;
+  --color-danger: #ef4444;
+  --color-danger-soft: #450a0a;
+  --color-code-bg: #020617;
+  --color-code-fg: #e2e8f0;
+  color: var(--color-ink);
+}
+
 body {
   background: var(--color-canvas);
   color: var(--color-ink);

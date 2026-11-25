@@ -16,9 +16,11 @@ export interface NavLinkItem {
 export interface NavBarProps {
   brand: string;
   links?: NavLinkItem[];
+  /** Extra controls shown before "Sign out" (e.g. a theme toggle). */
+  actions?: React.ReactNode;
 }
 
-export function NavBar({ brand, links = [] }: NavBarProps) {
+export function NavBar({ brand, links = [], actions }: NavBarProps) {
   const pathname = usePathname();
   const router = useRouter();
 
@@ -61,14 +63,17 @@ export function NavBar({ brand, links = [] }: NavBarProps) {
           </div>
         )}
       </div>
-      <button
-        onClick={() =>
-          signOut(auth).then(() => router.replace("/login"))
-        }
-        className="text-sm text-ink-muted hover:text-ink"
-      >
-        Sign out
-      </button>
+      <div className="flex items-center gap-4">
+        {actions}
+        <button
+          onClick={() =>
+            signOut(auth).then(() => router.replace("/login"))
+          }
+          className="text-sm text-ink-muted hover:text-ink"
+        >
+          Sign out
+        </button>
+      </div>
     </nav>
   );
 }
